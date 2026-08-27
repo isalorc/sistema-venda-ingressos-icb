@@ -6,7 +6,7 @@
 
 ## Regras Arquiteturais e de Estrutura (Estritamente Obrigatórias)
 
-1. **Gestão de Dependências (Single POM):** O projeto NÃO utiliza múltiplos módulos (multi-module) do Maven. Todo o gerenciamento de dependências ocorre em um único arquivo `pom.xml` localizado no nível da pasta raiz do projeto. Não sugira a criação de diretórios com sub-poms.
+1. **Gestão de Dependências (Single POM):** O projeto NÃO utiliza múltiplos módulos (multi-module) do Maven. Todo o gerenciamento de dependências ocorre em um único arquivo `../../pom.xml` localizado no nível da pasta raiz do projeto. Não sugira a criação de diretórios com sub-poms.
 2. **Modelagem de Pastas (Sem criação de novos diretórios):** Não criar novas pastas nem arquivos sem necessidade. Reaproveite a estrutura já existente e mantenha o modelo de pastas enxuto. O código Java deve seguir o padrão Maven padrão em `src/main/java`, com pacotes em `br.com.icb.ingressos.*`.
     * **`src/main/java/br/com/icb/ingressos/domain`**: O coração do software. Contém entidades puras e lógicas de negócio. **Regra rígida:** Zero dependências de frameworks (proibido usar `@Entity`, `@Table`, anotações do Spring, etc). Apenas código Java puro.
     * **`src/main/java/br/com/icb/ingressos/ports`**: Contém exclusivamente as interfaces (contratos). Define o que o sistema oferece (Input Ports) e o que ele exige do mundo externo (Output Ports).
