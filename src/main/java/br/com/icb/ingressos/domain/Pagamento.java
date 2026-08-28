@@ -3,8 +3,8 @@ package br.com.icb.ingressos.domain;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import br.com.icb.ingressos.domain.enuns.MetodoPagamento;
-import br.com.icb.ingressos.domain.enuns.StatusPagamento;
+import br.com.icb.ingressos.domain.enums.MetodoPagamento;
+import br.com.icb.ingressos.domain.enums.StatusPagamento;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

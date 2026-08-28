@@ -3,7 +3,7 @@ package br.com.icb.ingressos.domain;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-import br.com.icb.ingressos.domain.enuns.StatusPedido;
+import br.com.icb.ingressos.domain.enums.StatusPedido;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

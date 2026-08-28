@@ -1,4 +1,4 @@
-package br.com.icb.ingressos.domain.enuns;
+package br.com.icb.ingressos.domain.enums;
 
 public enum StatusPedido {
     PENDENTE,

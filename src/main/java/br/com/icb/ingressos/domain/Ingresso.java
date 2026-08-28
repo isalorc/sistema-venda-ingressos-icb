@@ -1,6 +1,6 @@
 package br.com.icb.ingressos.domain;
 
-import br.com.icb.ingressos.domain.enuns.StatusIngresso;
+import br.com.icb.ingressos.domain.enums.StatusIngresso;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
