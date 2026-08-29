@@ -35,4 +35,4 @@ jobs:
               --title "feat: $CURRENT_BRANCH" \
               --body "PR gerado automaticamente para a branch de desenvolvimento."
             echo "Pull Request criado com sucesso para a branch develop!"
-          }
+          fi
