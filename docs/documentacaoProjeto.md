@@ -116,30 +116,43 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
 
 ## 10. Estado atual do código
 
-- `pom.xml`: apenas JUnit 5 e Lombok. **Spring Boot ainda não foi adicionado.**
-- `src/main/java/br/com/icb/ingressos/application/SistemaVendaIngressosApplication.java`:
-  `main` que apenas imprime uma mensagem. **Ainda não é `@SpringBootApplication`.**
-- `src/main/java/br/com/icb/ingressos/domain/`: 6 entidades **anêmicas**
-  (`@Getter/@Setter` via Lombok) — `Usuario`, `Evento`, `Lote`, `Ingresso`,
-  `Pedido`, `Pagamento` — e os enums em `domain/enums/` (`StatusIngresso`,
-  `StatusPedido`, `StatusPagamento`, `MetodoPagamento`).
-- Ainda **não existem** os pacotes `ports`, `usecase`, `adapter`, `config`.
+**Épico 0 concluído** (fundação Spring Boot):
+
+- `pom.xml`: Spring Boot 3.3.5 (`spring-boot-starter-parent`), starters `web`,
+  `validation`, `actuator`, `test`; Lombok; plugins `spring-boot` e `jacoco`.
+- `src/main/java/br/com/icb/ingressos/SistemaVendaIngressosApplication.java`:
+  `@SpringBootApplication` no pacote raiz (component scan cobre todas as camadas).
+- `src/main/resources/application.yml`: perfis `dev` (padrão, `app.persistencia=memoria`)
+  e `prod` (`postgres`); Actuator expõe `health,info,metrics`; `app.reserva.ttl=PT15M` (RN-2).
+- `adapter/in/web/`: `GlobalExceptionHandler` (`@RestControllerAdvice` estendendo
+  `ResponseEntityExceptionHandler`) + `ErroResponse` (record) — respostas de erro
+  padronizadas para 404/405/415/422/500. Handlers das exceções de domínio entram no Épico 1.
+- `.editorconfig` adicionado.
+
+**Ainda pendente:**
+
+- `domain/`: 6 entidades **anêmicas** (`@Getter/@Setter` via Lombok) — `Usuario`,
+  `Evento`, `Lote`, `Ingresso`, `Pedido`, `Pagamento` — e enums em `domain/enums/`.
+  Alvo (Épico 1): modelo rico. Ajustes: `StatusPedido.EXPIRADO`, remover `MetodoPagamento.BOLETO`.
+- Pacotes `ports`, `usecase`, `config` e o restante de `adapter` ainda vazios.
 
 ## 11. Como compilar e executar
 
+Pré-requisitos: **JDK 17** e **Maven 3.9+** no `PATH`.
+
 ```bash
-mvn clean verify        # compila e roda os testes
-mvn compile             # apenas compila
+mvn clean verify                                    # compila, testa, gera cobertura (target/site/jacoco)
+mvn spring-boot:run -Dspring-boot.run.profiles=dev   # sobe a API em http://localhost:8080
 ```
 
-Após o Épico 0 (adoção do Spring Boot): `mvn spring-boot:run -Dspring-boot.run.profiles=dev`.
+Verificação: `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`.
 
 ## 12. Próximos passos (backlog técnico)
 
 O backlog completo (Épicos 0 a 11, sequência de execução e marco de MVP) está no
 plano de desenvolvimento. Resumo:
 
-- **Épico 0:** configurar Spring Boot no `pom.xml`, converter o `main` em `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros.
+- **Épico 0 (concluído):** Spring Boot no `pom.xml`, `main` como `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros, JaCoCo.
 - **Épico 1:** transformar as entidades anêmicas em modelo rico (transições de estado, invariantes de estoque, exceções de domínio) + testes.
 - **Épico 2:** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
 - **Épico 3:** casos de uso — núcleo em `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
