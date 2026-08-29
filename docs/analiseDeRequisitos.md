@@ -5,24 +5,32 @@ TCC do curso de Análise e Desenvolvimento de Sistemas da Fatec.
 Este documento levanta os **requisitos funcionais (RF)** e **não funcionais
 (RNF)** do sistema. Ele deriva de:
 
-- [`diagramaCasoDeUso.md`](diagramaCasoDeUso.md) — atores e casos de uso
-- [`diagramaSequencia.md`](diagramaSequencia.md) — fluxo de compra
-- [`modelagemEntidadeRelacionamento.md`](modelagemEntidadeRelacionamento.md) — modelo de dados
+- [`casoUsoEArquitetura.drawio`](casoUsoEArquitetura.drawio) — atores, casos de uso e arquitetura hexagonal
+- [`diagramaSequencia.drawio`](diagramaSequencia.drawio) — fluxo de compra
+- [`entidadeRelacional.drawio`](entidadeRelacional.drawio) — modelo de dados
 - [`regrasDeNegocio.md`](regrasDeNegocio.md) — regras de negócio (RN-1 a RN-6)
-- [`desenhoArquiteturaHexagonal.md`](desenhoArquiteturaHexagonal.md) — arquitetura
+- [`documentacaoProjeto.md`](documentacaoProjeto.md) — resumo consolidado e motivação
 
 ## 1. Visão geral do produto
 
 Sistema web para **venda de ingressos de eventos de uma única igreja (ICB)**.
-Um **Fiel** consulta os eventos disponíveis, compra um ingresso e paga online
+Um **Cliente** consulta os eventos disponíveis, compra um ingresso e paga online
 (PIX ou cartão) por meio de um gateway externo. Um **Administrador** cadastra os
 eventos, gerencia os lotes de ingressos e acompanha os inscritos.
+
+**Motivação:** hoje a igreja usa a plataforma Sympla, que cobra **taxa de serviço
+de 10%** sobre o valor do ingresso (mínimo de R$ 3,99 para ingressos até
+R$ 39,90) mais **taxa de processamento de 2% a 2,5%** por transação. Um sistema
+próprio integrado diretamente a um gateway de pagamento elimina a taxa de serviço
+de 10% e dá à igreja controle sobre dados, identidade visual e regras dos
+eventos. Detalhamento e referência em
+[`documentacaoProjeto.md`](documentacaoProjeto.md) (seção 2).
 
 Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 - **Não** há mapa/numeração de assentos nem múltiplos locais.
 - **1 ingresso por compra** (RN-1).
-- Fiel **não cria conta** — informa os dados na compra (RN-4).
+- Cliente **não cria conta** — informa os dados na compra (RN-4).
 - Gateway de pagamento e persistência começam como implementações simplificadas
   (adapter *fake* e repositório em memória).
 
@@ -30,7 +38,7 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 | Ator | Descrição |
 |---|---|
-| **Fiel / Cliente** | Pessoa que compra ingresso. Não autenticado. |
+| **Cliente** | Pessoa que compra ingresso. Não autenticado. |
 | **Administrador da Igreja** | Gerencia eventos, lotes e inscritos. Autenticado via JWT. |
 | **Gateway de Pagamento** (sistema externo) | Mercado Pago. Gera cobrança e notifica o resultado do pagamento via webhook. |
 | **Agendador (Scheduler)** (ator de sistema) | Dispara periodicamente a expiração de reservas não pagas. |
@@ -43,24 +51,24 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 ## 2. Requisitos Funcionais
 
-### 2.1. Consulta de eventos (Fiel)
+### 2.1. Consulta de eventos (Cliente)
 
 | ID | Requisito | Prioridade | Origem |
 |---|---|---|---|
 | **RF-01** | O sistema deve listar os eventos disponíveis para compra (eventos futuros com pelo menos um lote com ingressos disponíveis). | M | UC1 |
 | **RF-02** | O sistema deve exibir os detalhes de um evento: nome, descrição, data/hora e a lista de lotes com nome, preço e quantidade disponível. | M | UC1 |
-| **RF-03** | O sistema não deve exibir para o Fiel eventos já encerrados ou sem ingressos. | S | UC1 |
+| **RF-03** | O sistema não deve exibir para o Cliente eventos já encerrados ou sem ingressos. | S | UC1 |
 
-### 2.2. Compra de ingresso (Fiel)
+### 2.2. Compra de ingresso (Cliente)
 
 | ID | Requisito | Prioridade | Origem |
 |---|---|---|---|
-| **RF-04** | O sistema deve permitir ao Fiel iniciar a compra de **1 ingresso** de um lote informando nome, e-mail e telefone. | M | UC2 / RN-1 / RN-4 |
+| **RF-04** | O sistema deve permitir ao Cliente iniciar a compra de **1 ingresso** de um lote informando nome, e-mail e telefone. | M | UC2 / RN-1 / RN-4 |
 | **RF-05** | Ao iniciar a compra, o sistema deve criar ou reaproveitar um cadastro de usuário identificado pelo **e-mail**. | M | RN-4 |
 | **RF-06** | O sistema deve reservar um ingresso disponível do lote de forma segura contra concorrência (dois Fiéis não podem reservar o mesmo ingresso). | M | Seq. 3–7 / RN |
 | **RF-07** | Se o lote não tiver ingressos disponíveis, o sistema deve informar que está **esgotado** e não criar pedido. | M | Seq. "Ingressos Esgotados" |
 | **RF-08** | Ao reservar, o sistema deve decrementar a quantidade disponível do lote e registrar um **Pedido** com status `PENDENTE` e um **Pagamento** `PENDENTE`, com valor igual ao preço do lote. | M | Seq. 8–10 / RN-1 |
-| **RF-09** | O sistema deve solicitar ao gateway a geração de uma cobrança (PIX ou cartão) e retornar ao Fiel o link/QR de pagamento. | M | UC3 / Seq. 11–13 / RN-3 |
+| **RF-09** | O sistema deve solicitar ao gateway a geração de uma cobrança (PIX ou cartão) e retornar ao Cliente o link/QR de pagamento. | M | UC3 / Seq. 11–13 / RN-3 |
 | **RF-10** | O ingresso reservado **não** deve ter código QR até a confirmação do pagamento. | M | RN-6 |
 
 ### 2.3. Pagamento e confirmação
@@ -71,7 +79,7 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 | **RF-12** | O processamento da notificação de pagamento deve ser **idempotente** (notificações repetidas não podem gerar efeito duplicado). | M | RN / boas práticas |
 | **RF-13** | Ao confirmar pagamento **aprovado**, o sistema deve: marcar o Pagamento como `APROVADO`, o Pedido como `PAGO`, o Ingresso como `VENDIDO` e **gerar o código QR** definitivo. | M | RN-6 |
 | **RF-14** | Ao confirmar pagamento **recusado**, o sistema deve liberar a reserva do ingresso e repor a quantidade disponível do lote. | M | RN |
-| **RF-15** | Após a venda confirmada, o sistema deve enviar o ingresso (com QR) ao Fiel por **e-mail**. | S | RN-4 |
+| **RF-15** | Após a venda confirmada, o sistema deve enviar o ingresso (com QR) ao Cliente por **e-mail**. | S | RN-4 |
 | **RF-16** | O sistema deve validar a autenticidade da notificação recebida no webhook (assinatura/segredo). | M | Segurança |
 
 ### 2.4. Expiração de reservas
@@ -153,9 +161,9 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 | ID | Requisito | Prioridade |
 |---|---|---|
-| **RNF-18** | O sistema coleta apenas os dados pessoais necessários do Fiel (nome, e-mail, telefone) — princípio da minimização. | M |
-| **RNF-19** | A finalidade do uso dos dados (emissão e envio do ingresso) deve ser informada ao Fiel no momento da compra. | S |
-| **RNF-20** | Deve ser possível excluir/anonimizar os dados de um Fiel mediante solicitação. | C |
+| **RNF-18** | O sistema coleta apenas os dados pessoais necessários do Cliente (nome, e-mail, telefone) — princípio da minimização. | M |
+| **RNF-19** | A finalidade do uso dos dados (emissão e envio do ingresso) deve ser informada ao Cliente no momento da compra. | S |
+| **RNF-20** | Deve ser possível excluir/anonimizar os dados de um Cliente mediante solicitação. | C |
 
 ### 3.5. Desempenho e escalabilidade
 
@@ -210,11 +218,11 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 - A igreja possui uma conta no Mercado Pago para receber os pagamentos.
 - Há um servidor/hospedagem com HTTPS e acesso à internet para receber webhooks.
 - O volume de eventos e de vendas é compatível com uma aplicação de instância única.
-- O e-mail informado pelo Fiel é válido e é o canal de entrega do ingresso.
+- O e-mail informado pelo Cliente é válido e é o canal de entrega do ingresso.
 
 ## 6. Requisitos fora de escopo (agora)
 
-- Contas de Fiel com login e área "meus ingressos" (evolução de RN-4).
+- Contas de Cliente com login e área "meus ingressos" (evolução de RN-4).
 - Compra de múltiplos ingressos num único pedido (evolução de RN-1).
 - Boleto como método de pagamento (evolução de RN-3).
 - Check-in/validação de ingresso na portaria (RF-27).

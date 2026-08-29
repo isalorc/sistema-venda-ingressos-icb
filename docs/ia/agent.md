@@ -10,13 +10,12 @@
 
 | Documento | Conteúdo |
 |---|---|
-| `docs/analiseDeRequisitos.md` | Requisitos funcionais (RF) e não funcionais (RNF), restrições, premissas, fora de escopo. |
-| `docs/regrasDeNegocio.md` | Regras de negócio RN-1 a RN-6 e máquinas de estado. |
-| `docs/desenhoArquiteturaHexagonal.md` | Visão da arquitetura (adapters in/out, core). |
-| `docs/diagramaCasoDeUso.md` | Atores e casos de uso. |
-| `docs/diagramaSequencia.md` | Fluxo de compra passo a passo. |
-| `docs/modelagemEntidadeRelacionamento.md` | Modelo de dados (6 entidades). |
-| `../documentacaoProjeto.md` | Resumo consolidado + próximos passos. |
+| `../documentacaoProjeto.md` | Resumo consolidado, motivação (custos Sympla) e referências. |
+| `../analiseDeRequisitos.md` | Requisitos funcionais (RF) e não funcionais (RNF), restrições, premissas, fora de escopo. |
+| `../regrasDeNegocio.md` | Regras de negócio RN-1 a RN-6 e máquinas de estado. |
+| `../casoUsoEArquitetura.drawio` | Diagramas de casos de uso e da arquitetura hexagonal (in/out, core). |
+| `../diagramaSequencia.drawio` | Fluxo de compra passo a passo. |
+| `../entidadeRelacional.drawio` | Modelo de dados (6 entidades). |
 
 **Sempre que uma decisão contrariar ou não estiver nesses documentos, pare e pergunte.**
 
@@ -38,7 +37,7 @@
 | RN-1 | **1 ingresso por pedido.** Estruturar o código para evoluir para N (método de reserva unitário reutilizável). |
 | RN-2 | Reserva não paga expira em **15 minutos** (TTL configurável). Job periódico libera o estoque. |
 | RN-3 | Métodos de pagamento: **PIX e CARTAO**. `MetodoPagamento = { PIX, CARTAO }` (sem boleto). |
-| RN-4 | Fiel **não tem cadastro/senha**: informa nome, e-mail e telefone na compra; `Usuario` é resolvido pelo e-mail; ingresso enviado por e-mail. |
+| RN-4 | Cliente **não tem cadastro/senha**: informa nome, e-mail e telefone na compra; `Usuario` é resolvido pelo e-mail; ingresso enviado por e-mail. |
 | RN-5 | Admin autentica via **JWT próprio**. |
 | RN-6 | `codigo_qr` é gerado **somente após o pagamento aprovado**; na reserva o ingresso fica `RESERVADO` sem código. |
 
@@ -68,7 +67,7 @@
   - Alvo: **modelo rico** — métodos de negócio (`reservar`, `confirmarVenda`, `liberarReserva`, `decrementarDisponivel`, `marcarPago`, `expirar`…), guard clauses nas transições de estado, remover `@Setter` público.
   - Ajustes pendentes: adicionar `StatusPedido.EXPIRADO`; remover `MetodoPagamento.BOLETO`.
 - Ainda **não existem** os pacotes `ports`, `usecase`, `adapter`, `config`.
-- Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 7.
+- Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
 
 ## Ordem de trabalho recomendada
 

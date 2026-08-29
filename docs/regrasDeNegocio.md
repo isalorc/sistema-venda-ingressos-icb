@@ -12,7 +12,7 @@ base para os casos de uso (`usecase`) e para o modelo de domínio (`domain`).
 
 - Venda de ingressos para **uma única igreja** (ICB).
 - **Sem** múltiplos locais e **sem** mapa/numeração de assentos.
-- Atores: **Fiel/Cliente** (compra ingresso) e **Administrador da Igreja**
+- Atores: **Cliente** (compra ingresso) e **Administrador da Igreja**
   (cadastra eventos e lotes, acompanha inscritos).
 - Pagamento processado por **gateway externo** (Mercado Pago), integrado via
   porta de saída. No MVP o adapter é **fake**; a integração real (sandbox) é
@@ -25,15 +25,15 @@ base para os casos de uso (`usecase`) e para o modelo de domínio (`domain`).
 | **RN-1** | Ingressos por compra | **1 ingresso por pedido.** Cada operação de compra gera um `Pedido` com exatamente um `Ingresso`. | Até **N** ingressos por pedido, com limite máximo configurável. |
 | **RN-2** | Expiração da reserva (TTL) | Reserva não paga expira **15 minutos** após a criação do `Pedido` (status `PENDENTE`). Valor configurável em `application.yml`. Um job periódico libera as reservas expiradas. | — |
 | **RN-3** | Métodos de pagamento | **PIX** e **CARTÃO**. Enum `MetodoPagamento = { PIX, CARTAO }`. | Adicionar **BOLETO** (compensação D+1, TTL de reserva próprio). |
-| **RN-4** | Identificação do fiel | **Sem cadastro/senha.** Na compra o fiel informa **nome, e-mail e telefone**. O sistema cria um `Usuario` novo ou reaproveita um existente pelo **e-mail**. O ingresso/QR é entregue por **e-mail**. | **Conta com login** (e-mail + senha), área autenticada "meus ingressos" e histórico de pedidos. |
+| **RN-4** | Identificação do cliente | **Sem cadastro/senha.** Na compra o cliente informa **nome, e-mail e telefone**. O sistema cria um `Usuario` novo ou reaproveita um existente pelo **e-mail**. O ingresso/QR é entregue por **e-mail**. | **Conta com login** (e-mail + senha), área autenticada "meus ingressos" e histórico de pedidos. |
 | **RN-5** | Autenticação do administrador | **JWT próprio.** `POST /api/admin/login` (e-mail + senha) retorna um token; todas as rotas `/api/admin/**` exigem o token. Senhas com hash **BCrypt**. Chave/segredo do JWT via variável de ambiente. | Rotação de credenciais, múltiplos perfis de admin, ou login via provedor externo (OAuth2) se necessário. |
 | **RN-6** | Geração do código QR do ingresso | O `codigo_qr` é gerado **somente após a confirmação do pagamento**. Na reserva o ingresso fica `RESERVADO` **sem código**; ao aprovar o pagamento, gera-se um identificador único (UUID / hash assinado) e o status passa a `VENDIDO`. | — |
 
 ## Fluxo de compra (resumo)
 
-Detalhe completo em [`diagramaSequencia.md`](diagramaSequencia.md).
+Detalhe completo em [`diagramaSequencia.drawio`](diagramaSequencia.drawio).
 
-1. Fiel escolhe um **lote** de um evento e envia seus dados (RN-4).
+1. Cliente escolhe um **lote** de um evento e envia seus dados (RN-4).
 2. Sistema resolve/cria o `Usuario` pelo e-mail.
 3. Sob **bloqueio de concorrência** (lock pessimista), busca um `Ingresso`
    `DISPONIVEL` do lote. Se não houver, retorna **esgotado** (HTTP 409).
@@ -42,14 +42,14 @@ Detalhe completo em [`diagramaSequencia.md`](diagramaSequencia.md).
 5. Cria `Pedido` `PENDENTE` e `Pagamento` `PENDENTE`; `valor_total` = preço do
    lote (RN-1: 1 ingresso).
 6. Chama o gateway de pagamento e obtém o link/QR de pagamento (RN-3).
-7. Retorna ao fiel os dados de pagamento.
+7. Retorna ao cliente os dados de pagamento.
 
 ### Confirmação de pagamento (webhook)
 
 - O gateway notifica o sistema em `POST /api/webhooks/pagamento`.
 - O processamento é **idempotente** (a notificação pode se repetir).
 - **Aprovado:** `Pagamento` → `APROVADO`; `Pedido` → `PAGO`; `Ingresso` →
-  `VENDIDO` com `codigo_qr` gerado (RN-6); e-mail enviado ao fiel (RN-4).
+  `VENDIDO` com `codigo_qr` gerado (RN-6); e-mail enviado ao cliente (RN-4).
 - **Recusado / expirado:** libera a reserva do ingresso, repõe o estoque do lote
   e cancela o pagamento.
 
