@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: sistema-venda-ingressos-icb
+  profiles:
+    default: dev
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Configuração da aplicação (não-Spring). Ver docs/regrasDeNegocio.md.
+app:
+  # Estratégia de persistência ativa: memoria | postgres
+  persistencia: memoria
+  reserva:
+    # TTL da reserva não paga (RN-2). Formato ISO-8601 Duration.
+    ttl: PT15M
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    br.com.icb.ingressos: DEBUG
+
+app:
+  persistencia: memoria
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    br.com.icb.ingressos: INFO
+
+app:
+  persistencia: postgres

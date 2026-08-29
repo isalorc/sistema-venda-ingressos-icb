@@ -61,12 +61,18 @@
 
 ## Estado atual do projeto (agosto/2026)
 
-- `pom.xml`: apenas JUnit 5 e Lombok. **Spring Boot ainda não foi adicionado** (Épico 0 do backlog).
-- `SistemaVendaIngressosApplication`: `main` "Hello World", **não** é `@SpringBootApplication` ainda.
-- `domain/`: 6 entidades **anêmicas** (`@Getter/@Setter/@AllArgsConstructor` via Lombok) — `Usuario`, `Evento`, `Lote`, `Ingresso`, `Pedido`, `Pagamento` — e os enums em `domain/enums/` (`StatusIngresso`, `StatusPedido`, `StatusPagamento`, `MetodoPagamento`).
-  - Alvo: **modelo rico** — métodos de negócio (`reservar`, `confirmarVenda`, `liberarReserva`, `decrementarDisponivel`, `marcarPago`, `expirar`…), guard clauses nas transições de estado, remover `@Setter` público.
-  - Ajustes pendentes: adicionar `StatusPedido.EXPIRADO`; remover `MetodoPagamento.BOLETO`.
-- Ainda **não existem** os pacotes `ports`, `usecase`, `adapter`, `config`.
+**Épico 0 concluído:**
+- `pom.xml`: Spring Boot 3.3.5 (`spring-boot-starter-parent`), starters `web` + `validation` + `actuator` + `test`, Lombok, plugins `spring-boot` e `jacoco`. Single POM. Build com `mvn` (Maven 3.9+ no PATH — sem wrapper).
+- `br.com.icb.ingressos.SistemaVendaIngressosApplication` — `@SpringBootApplication` no **pacote raiz**.
+- `application.yml` — perfis `dev` (padrão, `app.persistencia=memoria`) e `prod` (`postgres`); Actuator expõe `health,info,metrics`; `app.reserva.ttl=PT15M` (RN-2).
+- `adapter/in/web/`: `GlobalExceptionHandler` (estende `ResponseEntityExceptionHandler`) + `ErroResponse` (record). Respostas de erro padronizadas; handlers das exceções de **domínio entram no Épico 1**.
+- `.editorconfig`.
+
+**Pendente:**
+- `domain/`: 6 entidades **anêmicas** (`@Getter/@Setter/@AllArgsConstructor` via Lombok) — `Usuario`, `Evento`, `Lote`, `Ingresso`, `Pedido`, `Pagamento` — e os enums em `domain/enums/`.
+  - Alvo (Épico 1): **modelo rico** — métodos de negócio (`reservar`, `confirmarVenda`, `liberarReserva`, `decrementarDisponivel`, `marcarPago`, `expirar`…), guard clauses nas transições, remover `@Setter` público.
+  - Ajustes: adicionar `StatusPedido.EXPIRADO`; remover `MetodoPagamento.BOLETO`.
+- Pacotes `ports`, `usecase`, `config` (e o restante de `adapter`) ainda vazios.
 - Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
 
 ## Ordem de trabalho recomendada

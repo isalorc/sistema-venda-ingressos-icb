@@ -45,15 +45,30 @@ Regra de dependência: `adapter` conhece `usecase` e `domain`; `domain` e
 Os arquivos `.drawio` abrem em <https://app.diagrams.net> ou na extensão
 "Draw.io Integration" do VS Code / plugin do IntelliJ.
 
-## Como compilar e testar
+## Como compilar e executar
+
+Pré-requisitos: **JDK 17** e **Maven 3.9+** no `PATH`.
 
 ```bash
-mvn clean verify
+mvn clean verify                                    # compila, testa e gera cobertura (target/site/jacoco)
+mvn spring-boot:run -Dspring-boot.run.profiles=dev   # sobe a API em http://localhost:8080 (perfil dev)
+```
+
+Perfis: **`dev`** (padrão, persistência em memória) e **`prod`** (PostgreSQL — a
+partir do Épico 9). Selecione com `-Dspring-boot.run.profiles=<perfil>` ou
+`SPRING_PROFILES_ACTIVE`.
+
+Verificação rápida com a aplicação no ar:
+
+```bash
+curl http://localhost:8080/actuator/health   # {"status":"UP"}
+curl http://localhost:8080/rota-inexistente  # 404 no formato ErroResponse padrão
 ```
 
 ## Tecnologias
 
-- Java 17, Maven
-- Spring Boot 3 (Web, Data JPA, Security) — em adoção (ver Épico 0 do backlog)
-- PostgreSQL + Flyway (persistência final; MVP usa adapter em memória)
-- JUnit 5
+- Java 17, Maven 3.9+
+- Spring Boot 3.3 (Web, Validation, Actuator)
+- JaCoCo (cobertura), JUnit 5
+- A adicionar conforme o backlog: Spring Security + JWT (Épico 8), Spring Data JPA
+  + PostgreSQL + Flyway (Épico 9)
