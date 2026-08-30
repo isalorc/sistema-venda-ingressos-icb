@@ -3,3 +3,13 @@ target/
 *.iml
 *.class
 .DS_Store
+
+# Neon / segredos de ambiente
+.neon
+.env
+.env.local
+.env.*.local
+src/main/resources/application-local.yml
+
+# Claude Code (config e symlinks locais da máquina; skills versionadas ficam em .agents/)
+.claude/

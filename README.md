@@ -54,9 +54,36 @@ mvn clean verify                                    # compila, testa e gera cobe
 mvn spring-boot:run -Dspring-boot.run.profiles=dev   # sobe a API em http://localhost:8080 (perfil dev)
 ```
 
-Perfis: **`dev`** (padrão, persistência em memória) e **`prod`** (PostgreSQL — a
-partir do Épico 9). Selecione com `-Dspring-boot.run.profiles=<perfil>` ou
-`SPRING_PROFILES_ACTIVE`.
+Os testes de integração da persistência (`*PostgresTest`) e o de concorrência da
+reserva (RNF-30) rodam sobre um **PostgreSQL real e efêmero** (Zonky embarcado —
+**sem Docker**); o binário nativo é baixado no primeiro `mvn test`.
+
+### Perfis
+
+| Perfil | Persistência | Uso |
+|---|---|---|
+| **`dev`** (padrão) | Em memória | Desenvolvimento local sem banco. |
+| **`local`** | PostgreSQL (Neon, branch `dev`) | Rodar a API na máquina contra o banco na nuvem. Config em `application-local.yml` (fora do git). |
+| **`prod`** | PostgreSQL (Neon, branch `production`) | Ambiente hospedado. Datasource via variáveis de ambiente. |
+
+Selecione com `-Dspring-boot.run.profiles=<perfil>` ou `SPRING_PROFILES_ACTIVE`.
+
+### Banco de dados (Épico 9)
+
+PostgreSQL gerenciado no **Neon**. O schema é versionado em migrações **Flyway**
+(`src/main/resources/db/migration`). As entidades JPA (`@Entity`) ficam na borda
+(`adapter/out/persistence/jpa`), com mappers para o domínio; o núcleo do hexágono
+segue sem JPA. A reserva de ingresso usa **lock pessimista** (`SELECT … FOR
+UPDATE`) para não vender além do estoque sob concorrência (RNF-07).
+
+Variáveis de ambiente do perfil `prod`:
+
+```
+JDBC_DATABASE_URL           jdbc:postgresql://<host-pooler>/<db>?sslmode=require
+JDBC_DATABASE_URL_UNPOOLED   jdbc:postgresql://<host-direct>/<db>?sslmode=require   # migrações Flyway
+DATABASE_USERNAME
+DATABASE_PASSWORD
+```
 
 Verificação rápida com a aplicação no ar:
 
@@ -68,7 +95,7 @@ curl http://localhost:8080/rota-inexistente  # 404 no formato ErroResponse padr�
 ## Tecnologias
 
 - Java 17, Maven 3.9+
-- Spring Boot 3.3 (Web, Validation, Actuator)
-- JaCoCo (cobertura), JUnit 5
-- A adicionar conforme o backlog: Spring Security + JWT (Épico 8), Spring Data JPA
-  + PostgreSQL + Flyway (Épico 9)
+- Spring Boot 3.3 (Web, Validation, Actuator, Security, Data JPA)
+- Spring Security + JWT próprio (jjwt) — rotas `/api/admin/**`
+- Spring Data JPA + PostgreSQL (Neon) + Flyway
+- JaCoCo (cobertura), JUnit 5, Zonky embedded-postgres (testes de integração)
