@@ -70,4 +70,36 @@ class PagamentoTest {
 
         assertThatExceptionOfType(TransicaoInvalidaException.class).isThrownBy(pagamento::recusar);
     }
+
+    @Test
+    void vincularCobrancaGuardaAReferenciaDoGateway() {
+        var pagamento = pendente();
+
+        pagamento.vincularCobranca("mp-cobranca-123");
+
+        assertThat(pagamento.getReferenciaGateway()).isEqualTo("mp-cobranca-123");
+    }
+
+    @Test
+    void vincularCobrancaExigeReferenciaNaoVazia() {
+        assertThatIllegalArgumentException().isThrownBy(() -> pendente().vincularCobranca("  "));
+    }
+
+    @Test
+    void naoRevinculaCobrancaJaVinculada() {
+        var pagamento = pendente();
+        pagamento.vincularCobranca("mp-cobranca-123");
+
+        assertThatExceptionOfType(TransicaoInvalidaException.class)
+                .isThrownBy(() -> pagamento.vincularCobranca("mp-cobranca-456"));
+    }
+
+    @Test
+    void naoVinculaCobrancaEmPagamentoJaAprovado() {
+        var pagamento = pendente();
+        pagamento.aprovar(LocalDateTime.of(2026, 8, 29, 10, 5));
+
+        assertThatExceptionOfType(TransicaoInvalidaException.class)
+                .isThrownBy(() -> pagamento.vincularCobranca("mp-cobranca-123"));
+    }
 }

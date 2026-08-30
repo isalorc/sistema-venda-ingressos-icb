@@ -20,24 +20,42 @@ public class Pagamento {
     private final MetodoPagamento metodo;
     private LocalDateTime dataPagamento;
     private StatusPagamento status;
+    private String referenciaGateway;
 
     private Pagamento(Long id, Long pedidoId, LocalDateTime dataPagamento, BigDecimal valor,
-                      MetodoPagamento metodo, StatusPagamento status) {
+                      MetodoPagamento metodo, StatusPagamento status, String referenciaGateway) {
         this.id = id;
         this.pedidoId = Validacao.exigir(pedidoId, "pedidoId");
         this.valor = Validacao.exigirDinheiro(valor, "valor");
         this.metodo = Validacao.exigir(metodo, "metodo");
         this.dataPagamento = dataPagamento;
         this.status = Validacao.exigir(status, "status");
+        this.referenciaGateway = referenciaGateway;
     }
 
     public static Pagamento pendente(Long pedidoId, BigDecimal valor, MetodoPagamento metodo) {
-        return new Pagamento(null, pedidoId, null, valor, metodo, StatusPagamento.PENDENTE);
+        return new Pagamento(null, pedidoId, null, valor, metodo, StatusPagamento.PENDENTE, null);
     }
 
     public static Pagamento reconstituir(Long id, Long pedidoId, LocalDateTime dataPagamento,
-                                         BigDecimal valor, MetodoPagamento metodo, StatusPagamento status) {
-        return new Pagamento(Validacao.exigir(id, "id"), pedidoId, dataPagamento, valor, metodo, status);
+                                         BigDecimal valor, MetodoPagamento metodo, StatusPagamento status,
+                                         String referenciaGateway) {
+        return new Pagamento(Validacao.exigir(id, "id"), pedidoId, dataPagamento, valor, metodo, status,
+                referenciaGateway);
+    }
+
+    /**
+     * Vincula a referência da cobrança gerada no gateway de pagamento. Essa referência
+     * é usada depois para correlacionar a notificação do webhook ao pagamento (RF-12),
+     * de forma idempotente.
+     */
+    public void vincularCobranca(String referenciaGateway) {
+        exigirPendente("vincular a cobrança de");
+        if (this.referenciaGateway != null) {
+            throw new TransicaoInvalidaException(
+                    "O pagamento %s já possui uma cobrança vinculada.".formatted(id));
+        }
+        this.referenciaGateway = Validacao.exigirTexto(referenciaGateway, "referenciaGateway");
     }
 
     public void aprovar(LocalDateTime dataPagamento) {
