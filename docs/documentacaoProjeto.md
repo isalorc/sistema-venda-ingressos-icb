@@ -160,9 +160,55 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
   idempotente. Hora obtida via `java.time.Clock` do JDK; código QR gerado com
   `UUID` no caso de uso (sem portas dedicadas).
 
+**Épico 3 concluído** (casos de uso):
+
+- `usecase/`: 3 serviços `@Service @Transactional` que implementam `ports.in` e
+  consomem `ports.out`:
+  - `ComprarIngressoService` — resolve/cria o cliente pelo e-mail (RN-4), reserva
+    sob bloqueio (`LoteRepositoryPort#buscarPorIdComBloqueio`), cria `Pedido` e
+    `Pagamento` pendentes, solicita a cobrança ao gateway e vincula a referência.
+    Lote inexistente → 404; lote esgotado → 409, sem criar nada.
+  - `ConfirmarPagamentoService` — processamento **idempotente** do webhook: se o
+    pagamento já não está `PENDENTE`, ignora. Aprovado → `Pagamento` APROVADO,
+    `Pedido` PAGO, `Ingresso` VENDIDO com QR (`UUID`), notifica o cliente.
+    Recusado → libera a reserva, repõe o estoque do lote, cancela pagamento e pedido.
+  - `ExpirarReservasService` — TTL de `app.reserva.ttl` (`@Value` → `Duration`);
+    expira os pedidos `PENDENTE` criados antes de `agora - ttl`, devolve os
+    ingressos e o estoque, cancela o pagamento pendente e retorna a contagem.
+- `config/AplicacaoConfig`: bean `Clock` do JDK (sem porta dedicada — decisão do
+  Épico 2), injetado nos serviços para permitir `Clock.fixed(...)` nos testes.
+- `pom.xml`: adicionado `spring-tx` para `@Transactional`. Sem um
+  `TransactionManager` (só entra com o JPA no Épico 9) a anotação fica inócua e
+  não afeta o carregamento do contexto.
+
+**Épico 5 concluído** (persistência em memória):
+
+- `adapter/out/persistence/`: base pacote-privada `RepositorioEmMemoria<T>`
+  (`ConcurrentHashMap` + `AtomicLong`; ao persistir entidade nova, reconstitui-a
+  com o id gerado) e 6 adapters `*RepositoryEmMemoria` (`@Repository`,
+  `@ConditionalOnProperty` `app.persistencia=memoria`, ativo por padrão).
+- **Limitação conhecida:** `buscarPorIdComBloqueio` apenas delega para
+  `buscarPorId` — não há lock pessimista real. A serialização de verdade
+  (`SELECT ... FOR UPDATE`) e o teste de concorrência da reserva (RNF-30) entram
+  com o JPA/PostgreSQL (Épico 9) e a suíte de qualidade (Épico 10).
+
+**Épico 6.1 concluído** (gateway e notificação fake):
+
+- `adapter/out/payment/GatewayPagamentoFake` (`@Component`): gera referência
+  `fake-<uuid>` e dados de pagamento sintéticos (payload de QR PIX só para PIX).
+  A confirmação é simulada chamando o webhook manualmente.
+- `adapter/out/notification/NotificacaoPorLog` (`@Component`): *stub* que apenas
+  registra em log o envio do ingresso, até a definição do template de e-mail.
+
+**Cobertura de testes:** 64 testes verdes — unitários do domínio e dos 3 serviços
+(Mockito + `Clock.fixed`) e um teste de integração `@SpringBootTest`
+(`FluxoDeCompraEmMemoriaTest`) que exercita compra → webhook aprovado → reentrega
+idempotente sobre os adapters reais em memória.
+
 **Ainda pendente:**
 
-- Pacotes `usecase`, `config` e o restante de `adapter` ainda vazios.
+- `adapter/in` além do handler de erros (controllers REST e webhook — Épico 4) e o
+  scheduler de expiração (Épico 7).
 
 ## 11. Como compilar e executar
 
@@ -183,8 +229,10 @@ plano de desenvolvimento. Resumo:
 - **Épico 0 (concluído):** Spring Boot no `pom.xml`, `main` como `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros, JaCoCo.
 - **Épico 1 (concluído):** entidades anêmicas → modelo rico (transições de estado, invariantes de estoque, exceções de domínio ligadas ao `GlobalExceptionHandler`) + testes unitários sem Spring.
 - **Épico 2 (concluído):** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
-- **Épico 3:** casos de uso — núcleo em `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
-- **Épicos 4–7:** adapter REST, persistência em memória, gateway fake, scheduler de reservas → MVP navegável.
+- **Épico 3 (concluído):** casos de uso — `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
+- **Épico 5 (concluído):** persistência em memória (`RepositorioEmMemoria` + 6 adapters `*RepositoryEmMemoria`). Lock pessimista real adiado para o Épico 9.
+- **Épico 6.1 (concluído):** `GatewayPagamentoFake` e `NotificacaoPorLog` (stub).
+- **Épicos 4 e 7 (próximo):** adapter REST + webhook e scheduler de expiração → MVP navegável em `dev`.
 - **Épicos 8–11:** segurança JWT, PostgreSQL + Flyway, qualidade/CI (ArchUnit, Jacoco, Testcontainers), Mercado Pago real, deploy.
 
 ## 13. Referências bibliográficas
