@@ -26,13 +26,12 @@ import jakarta.validation.Valid;
  * Endpoints administrativos de gestão de eventos, lotes e inscritos
  * (RF-20, RF-22, RF-23, RF-25).
  *
- * <p><strong>TODO Épico 8:</strong> estas rotas exigem administrador autenticado
- * via JWT (RF-26 / RNF-12). No MVP navegável elas ficam abertas — a segurança
- * entra junto com o {@code POST /api/admin/login}.
+ * <p>Todas as rotas exigem administrador autenticado (RF-26): envie o token do
+ * {@code POST /api/admin/login} no header {@code Authorization: Bearer <token>}.
  */
 @RestController
 @RequestMapping("/api/admin/eventos")
-@Tag(name = "Administração", description = "Gestão de eventos, lotes e inscritos (autenticação: Épico 8)")
+@Tag(name = "Administração", description = "Gestão de eventos, lotes e inscritos (requer login)")
 public class AdminEventoController {
 
     private final CadastrarEventoUseCase cadastrarEvento;

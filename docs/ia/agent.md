@@ -129,8 +129,6 @@ do estoque), `ConsultarEventoService` (todos os lotes; 404 se evento não existe
   divergência → `AutenticacaoWebhookException` → 401 (RF-16). Status do gateway
   traduzido no controller (`approved`→APROVADO, `rejected`/`cancelled`→RECUSADO,
   resto ignorado com 200). Idempotência real fica no `ConfirmarPagamentoService`.
-- **Rotas `/api/admin/**` ficam ABERTAS** — `// TODO Épico 8: exigir JWT` no
-  controller. Segurança e CORS entram no Épico 8.
 - **OpenAPI/Swagger** (RNF-36): `springdoc-openapi-starter-webmvc-ui` no pom;
   `config/OpenApiConfig` (bean `OpenAPI`); `/swagger-ui.html` e `/v3/api-docs` em
   dev, desligados no perfil `prod` via `application.yml`.
@@ -141,13 +139,35 @@ do estoque), `ConsultarEventoService` (todos os lotes; 404 se evento não existe
   (`@Scheduled(fixedDelayString = "${app.reserva.intervalo-varredura}")`, PT1M por
   padrão; falha na varredura é logada em WARN e não propaga — RNF-28).
 
-**Testes:** 93 verdes — domínio + 8 serviços (Mockito), 4 slices `@WebMvcTest`,
-scheduler unitário, `FluxoDeCompraEmMemoriaTest` e `FluxoDeCompraViaRestTest`
-(`@SpringBootTest` RANDOM_PORT: cadastro → compra → webhook → inscrito, por HTTP).
+**Épico 8 concluído** (segurança admin — RF-19 / RF-26 / RNF-12 / RNF-16):
+- `POST /api/admin/login` (`AdminAuthController` + `AutenticarAdminService`):
+  e-mail + senha (BCrypt) → JWT. Credencial de **um** admin em `app.admin.email` /
+  `app.admin.senha-hash` (env — RNF-13); dev = `admin@icb.local` / `admin123`.
+- `ports.out/TokenAdminPort` + `adapter/out/security/JwtTokenAdmin` (jjwt,
+  HMAC; segredo `app.jwt.secret`, validade `app.jwt.expiracao` PT2H).
+- `config/SecurityConfig`: stateless, CSRF off, `/api/admin/**` exige `ROLE_ADMIN`
+  (via `adapter/in/web/JwtAdminFilter`), **todo o resto segue público**; 401/403
+  saem como `ErroResponse`. CORS de `app.cors.allowed-origins` (dev `http://localhost:5173`).
+- `CredenciaisInvalidasException` → 401 no `GlobalExceptionHandler`.
+- Deps: `spring-boot-starter-security`, `jjwt` 0.12.6, `spring-security-test`.
+
+**Testes:** 109 verdes — + `AutenticarAdminServiceTest`, `JwtTokenAdminTest`,
+`AdminAuthControllerTest`, `SegurancaAdminTest` (`@SpringBootTest`: 401 sem token,
+login, token válido, preflight CORS). Slices `@WebMvcTest` usam
+`@AutoConfigureMockMvc(addFilters = false)`; `FluxoDeCompraViaRestTest` loga antes.
+
+**Collection Postman** (`docs/postman/`): pastas "0 · Infra", "1 · Fluxo de compra"
+(1º item = **Admin · Login**), "2 · Webhook — cenários", "3 · Erros"; requests
+admin mandam `Authorization: Bearer {{adminToken}}`. Validada com `newman`
+(17 requests, 24 assertions verdes).
 
 **Pendente:**
-- Collection Postman em `docs/postman/` (próximo passo).
+- Épico 9 (PostgreSQL + Flyway + lock pessimista real) — próximo.
 - Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
+
+**Questão em aberto (não puxar sem a usuária pedir):** admin único vs. admin raiz
+que cadastra outros admins com papéis. Anotada em `../regrasDeNegocio.md` seção
+"Questões em aberto"; a usuária ainda não decidiu se vale a pena.
 
 ## Ordem de trabalho recomendada
 
@@ -156,12 +176,12 @@ scheduler unitário, `FluxoDeCompraEmMemoriaTest` e `FluxoDeCompraViaRestTest`
 3. ~~Épico 2 — portas (`ports.in`, `ports.out`).~~ ✅
 4. ~~Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake.~~ ✅
 5. ~~Épico 4 + 7 — REST, webhook, Swagger e scheduler → **MVP navegável em perfil `dev`**.~~ ✅
-6. **Collection Postman** (`docs/postman/`) — environment com variáveis/credenciais
-   (`baseUrl`, `webhookSecret`, `adminToken` etc.), todas as requests (compra,
-   consulta, webhook, admin) e um exemplo de response salvo por request. Nasce
-   depois do Épico 4 e é estendida junto com o 7 e o 8. ← **próximo**
-7. Épico 8 (segurança JWT) → 9 (PostgreSQL) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy).
-8. **Frontend** — repositório **separado**, trilha de trabalho paralela que arranca
+6. ~~**Collection Postman** (`docs/postman/`) — environment, requests de compra/
+   consulta/webhook/admin e um exemplo de response por request.~~ ✅ (estendida
+   junto com o 7 e o 8).
+7. ~~Épico 8 — segurança admin (login JWT + `/api/admin/**` protegido) + CORS.~~ ✅
+8. Épico 9 (PostgreSQL + Flyway + lock pessimista) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy). ← **próximo**
+9. **Frontend** — repositório **separado**, trilha de trabalho paralela que arranca
    quando houver um contrato estável para consumir (Épico 4 + collection Postman).
    Backend e frontend são entregas **de igual peso** no TCC; aqui a ordem é só
    sequenciamento — o backend primeiro porque é o que destrava o resto.

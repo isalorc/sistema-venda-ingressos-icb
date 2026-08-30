@@ -37,6 +37,32 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <!--
+          Segurança das rotas administrativas (RF-26 / RNF-12): filtro de segurança,
+          BCrypt e CORS. O login emite um JWT próprio assinado com HMAC-SHA256
+          (biblioteca jjwt), validado por um OncePerRequestFilter.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!--
           Gestão declarativa de transações (@Transactional) nos casos de uso.
           Enquanto a persistência é em memória não há um TransactionManager e a
           anotação fica inócua; ao entrar o JPA (Épico 9) ela passa a valer sem
@@ -77,6 +103,11 @@
         <dependency>
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
