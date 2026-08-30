@@ -36,6 +36,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!--
+          Gestão declarativa de transações (@Transactional) nos casos de uso.
+          Enquanto a persistência é em memória não há um TransactionManager e a
+          anotação fica inócua; ao entrar o JPA (Épico 9) ela passa a valer sem
+          alterar os serviços.
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>

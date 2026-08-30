@@ -95,8 +95,28 @@
   `UUID` dentro do service (Épico 3, sem port).
 - 50 testes verdes.
 
+**Épico 3 concluído** (casos de uso):
+- `usecase/`: `ComprarIngressoService`, `ConfirmarPagamentoService` (webhook idempotente — no-op
+  se o pagamento já não está `PENDENTE`) e `ExpirarReservasService` — `@Service @Transactional`,
+  implementam `ports.in` e consomem `ports.out`.
+- `config/AplicacaoConfig`: bean `Clock` do JDK, injetado nos serviços (testes usam `Clock.fixed`).
+- `pom.xml`: `+spring-tx` (sem `TransactionManager` até o Épico 9 — anotação inócua, contexto ok).
+
+**Épico 5 concluído** (persistência em memória):
+- `adapter/out/persistence/`: base `RepositorioEmMemoria<T>` + 6 `*RepositoryEmMemoria`
+  (`@Repository` + `@ConditionalOnProperty app.persistencia=memoria`, ativo por padrão).
+- **Limitação:** `buscarPorIdComBloqueio` só delega para `buscarPorId`. Lock pessimista real
+  (`SELECT ... FOR UPDATE`) e teste de concorrência da reserva (RNF-30) ficam para os Épicos 9/10.
+
+**Épico 6.1 concluído** (fakes):
+- `adapter/out/payment/GatewayPagamentoFake` (referência `fake-<uuid>`, QR PIX sintético) e
+  `adapter/out/notification/NotificacaoPorLog` (stub que loga).
+
+**Testes:** 64 verdes — unitários do domínio e dos 3 serviços (Mockito + `Clock.fixed`) +
+`FluxoDeCompraEmMemoriaTest` (`@SpringBootTest`, compra → webhook aprovado → reentrega idempotente).
+
 **Pendente:**
-- Pacotes `usecase`, `config` (e o restante de `adapter`) ainda vazios.
+- `adapter/in` além do handler de erros: controllers REST + webhook (Épico 4) e scheduler (Épico 7).
 - Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
 
 ## Ordem de trabalho recomendada
@@ -104,8 +124,8 @@
 1. ~~Épico 0 — fundação Spring Boot.~~ ✅
 2. ~~Épico 1 — domínio rico + testes unitários (sem Spring).~~ ✅
 3. ~~Épico 2 — portas (`ports.in`, `ports.out`).~~ ✅
-4. Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake. ← **próximo**
-5. Épico 4 + 7 — REST e scheduler → **MVP navegável em perfil `dev`**.
+4. ~~Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake.~~ ✅
+5. Épico 4 + 7 — REST e scheduler → **MVP navegável em perfil `dev`**. ← **próximo**
 6. Épico 8 (segurança JWT) → 9 (PostgreSQL) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy).
 
 ---
