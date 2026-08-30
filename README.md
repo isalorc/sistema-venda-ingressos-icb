@@ -37,6 +37,7 @@ Regra de dependência: `adapter` conhece `usecase` e `domain`; `domain` e
 | [`docs/documentacaoProjeto.md`](docs/documentacaoProjeto.md) | Resumo consolidado, motivação e referências bibliográficas. |
 | [`docs/analiseDeRequisitos.md`](docs/analiseDeRequisitos.md) | Requisitos funcionais (RF) e não funcionais (RNF). |
 | [`docs/regrasDeNegocio.md`](docs/regrasDeNegocio.md) | Regras de negócio (RN-1 a RN-6) e máquinas de estado. |
+| [`docs/guiaApiFrontend.md`](docs/guiaApiFrontend.md) | Contrato REST para o time de frontend: endpoints, autenticação, formatos, fluxo de compra e lacunas conhecidas. |
 | [`docs/casoUsoEArquitetura.drawio`](docs/casoUsoEArquitetura.drawio) | Diagramas de casos de uso e da arquitetura hexagonal. |
 | [`docs/diagramaSequencia.drawio`](docs/diagramaSequencia.drawio) | Fluxo sequencial da compra de ingresso. |
 | [`docs/entidadeRelacional.drawio`](docs/entidadeRelacional.drawio) | Modelo entidade-relacionamento. |
@@ -99,3 +100,6 @@ curl http://localhost:8080/rota-inexistente  # 404 no formato ErroResponse padr�
 - Spring Security + JWT próprio (jjwt) — rotas `/api/admin/**`
 - Spring Data JPA + PostgreSQL (Neon) + Flyway
 - JaCoCo (cobertura), JUnit 5, Zonky embedded-postgres (testes de integração)
+
+# Artifact gerado 
+https://claude.ai/code/artifact/d1d52bfe-ccaa-429c-b096-8bd380a8ecc7?via=auto_preview
