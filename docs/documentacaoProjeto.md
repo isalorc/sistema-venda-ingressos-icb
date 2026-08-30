@@ -200,15 +200,32 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
 - `adapter/out/notification/NotificacaoPorLog` (`@Component`): *stub* que apenas
   registra em log o envio do ingresso, até a definição do template de e-mail.
 
-**Cobertura de testes:** 64 testes verdes — unitários do domínio e dos 3 serviços
-(Mockito + `Clock.fixed`) e um teste de integração `@SpringBootTest`
-(`FluxoDeCompraEmMemoriaTest`) que exercita compra → webhook aprovado → reentrega
-idempotente sobre os adapters reais em memória.
+**Épicos 3 (complemento), 4 e 7 concluídos** (MVP navegável):
+
+- `usecase/`: os 5 casos de uso restantes — listar eventos disponíveis, consultar
+  evento, cadastrar evento, criar lote (gera os ingressos — RF-23) e consultar
+  inscritos.
+- `adapter/in/web/`: `EventoController` (`GET /api/eventos`, `/{id}`),
+  `CompraController` (`POST /api/compras`), `AdminEventoController`
+  (`POST /api/admin/eventos`, `.../{id}/lotes`, `GET .../{id}/inscritos`) e
+  `WebhookPagamentoController` (`POST /api/webhooks/pagamento`). DTOs `record` em
+  `adapter/in/web/dto/`. O webhook autentica pelo header `X-Webhook-Token`
+  (`app.webhook.secret`) → 401 se inválido (RF-16), traduz o status do gateway e é
+  idempotente. **As rotas `/api/admin/**` ficam abertas até o Épico 8 (JWT).**
+- `adapter/in/scheduler/ExpiracaoDeReservasScheduler` + `config/AgendamentoConfig`
+  (`@EnableScheduling`): varre reservas vencidas a cada `app.reserva.intervalo-varredura`.
+- **OpenAPI/Swagger** (RNF-36) via `springdoc`: `/swagger-ui.html` e `/v3/api-docs`
+  em dev (desligados no perfil `prod`).
+
+**Cobertura de testes:** 93 testes verdes — unitários do domínio e dos 8 serviços
+(Mockito + `Clock.fixed`), 4 slices `@WebMvcTest`, teste do scheduler e dois testes
+`@SpringBootTest` (`FluxoDeCompraEmMemoriaTest` e `FluxoDeCompraViaRestTest`, este
+último exercitando cadastro → compra → webhook → inscrito inteiramente por HTTP).
 
 **Ainda pendente:**
 
-- `adapter/in` além do handler de erros (controllers REST e webhook — Épico 4) e o
-  scheduler de expiração (Épico 7).
+- Segurança das rotas admin (JWT) e CORS — Épico 8.
+- Collection Postman (`docs/postman/`) — próximo passo.
 
 ## 11. Como compilar e executar
 
@@ -220,6 +237,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev   # sobe a API em http://loca
 ```
 
 Verificação: `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`.
+Contrato da API: <http://localhost:8080/swagger-ui.html> (perfil `dev`).
 
 ## 12. Próximos passos (backlog técnico)
 
@@ -229,11 +247,13 @@ plano de desenvolvimento. Resumo:
 - **Épico 0 (concluído):** Spring Boot no `pom.xml`, `main` como `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros, JaCoCo.
 - **Épico 1 (concluído):** entidades anêmicas → modelo rico (transições de estado, invariantes de estoque, exceções de domínio ligadas ao `GlobalExceptionHandler`) + testes unitários sem Spring.
 - **Épico 2 (concluído):** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
-- **Épico 3 (concluído):** casos de uso — `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
+- **Épico 3 (concluído):** casos de uso — os 3 serviços de fluxo (`ComprarIngressoService`, `ConfirmarPagamentoService` idempotente, `ExpirarReservasService`) e os 5 de consulta/administração.
 - **Épico 5 (concluído):** persistência em memória (`RepositorioEmMemoria` + 6 adapters `*RepositoryEmMemoria`). Lock pessimista real adiado para o Épico 9.
 - **Épico 6.1 (concluído):** `GatewayPagamentoFake` e `NotificacaoPorLog` (stub).
-- **Épicos 4 e 7 (próximo):** adapter REST + webhook e scheduler de expiração → MVP navegável em `dev`.
+- **Épicos 4 e 7 (concluídos):** controllers REST + webhook (autenticado por segredo, idempotente), scheduler de expiração e contrato OpenAPI/Swagger → **MVP navegável em `dev`**. Rotas `/api/admin/**` abertas até o Épico 8.
+- **Collection Postman** (`docs/postman/`) — **próximo passo:** environment com variáveis e credenciais (`baseUrl`, `webhookSecret`, `adminToken`…), todas as requests (compra, consulta, webhook, admin) e um exemplo de response salvo por request. Estendida junto com os Épicos 7 e 8.
 - **Épicos 8–11:** segurança JWT, PostgreSQL + Flyway, qualidade/CI (ArchUnit, Jacoco, Testcontainers), Mercado Pago real, deploy.
+- **Frontend:** repositório **separado**, trilha paralela que arranca quando houver um contrato estável para consumir (contrato do Épico 4 + collection Postman). Backend e frontend têm **igual peso** na entrega do TCC — trabalhar o backend primeiro neste repo é apenas sequenciamento.
 
 ## 13. Referências bibliográficas
 

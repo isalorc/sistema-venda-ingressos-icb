@@ -115,6 +115,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.UNPROCESSABLE_ENTITY, excecao.getMessage(), caminho(requisicao)));
     }
 
+    /** Webhook de pagamento sem segredo válido (RF-16) → 401. */
+    @ExceptionHandler(AutenticacaoWebhookException.class)
+    public ResponseEntity<ErroResponse> tratarWebhookNaoAutenticado(AutenticacaoWebhookException excecao,
+                                                                    WebRequest requisicao) {
+        log.warn("Notificação de webhook rejeitada em {}: segredo inválido.", caminho(requisicao));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErroResponse.de(
+                HttpStatus.UNAUTHORIZED, excecao.getMessage(), caminho(requisicao)));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErroResponse> tratarArgumentoIlegal(IllegalArgumentException excecao,
                                                               WebRequest requisicao) {

@@ -23,6 +23,12 @@ app:
   reserva:
     # TTL da reserva não paga (RN-2). Formato ISO-8601 Duration.
     ttl: PT15M
+    # Intervalo entre varreduras do scheduler de expiração (RF-17). ISO-8601 Duration.
+    intervalo-varredura: PT1M
+  webhook:
+    # Segredo esperado no header X-Webhook-Token do webhook de pagamento (RF-16).
+    # Em produção vem de variável de ambiente (RNF-13); em dev usa um valor fixo.
+    secret: ${WEBHOOK_SECRET:troque-em-producao}
 
 ---
 spring:
@@ -36,6 +42,8 @@ logging:
 
 app:
   persistencia: memoria
+  webhook:
+    secret: dev-webhook-secret
 
 ---
 spring:
@@ -49,3 +57,10 @@ logging:
 
 app:
   persistencia: postgres
+
+# Contrato OpenAPI só é publicado fora de produção (RNF-36 atende o time de frontend).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

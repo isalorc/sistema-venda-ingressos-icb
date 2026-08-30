@@ -47,6 +47,17 @@
             <artifactId>spring-tx</artifactId>
         </dependency>
 
+        <!--
+          Documentação do contrato da API (OpenAPI 3 + Swagger UI) para consumo
+          pelo time de frontend (RNF-36). Expõe /v3/api-docs e /swagger-ui.html;
+          desligado no perfil prod via application.yml.
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -56,6 +67,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          Cliente HTTP para os testes de integração ponta a ponta: o TestRestTemplate
+          o detecta e passa a usá-lo no lugar do HttpURLConnection do JDK, que não
+          lê o corpo de respostas 4xx a POSTs com body (ex.: 401 do webhook).
+        -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

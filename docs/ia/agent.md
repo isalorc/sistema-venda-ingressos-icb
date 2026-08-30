@@ -112,11 +112,41 @@
 - `adapter/out/payment/GatewayPagamentoFake` (referência `fake-<uuid>`, QR PIX sintético) e
   `adapter/out/notification/NotificacaoPorLog` (stub que loga).
 
-**Testes:** 64 verdes — unitários do domínio e dos 3 serviços (Mockito + `Clock.fixed`) +
-`FluxoDeCompraEmMemoriaTest` (`@SpringBootTest`, compra → webhook aprovado → reentrega idempotente).
+**Épico 3 (complemento) concluído** — os 5 casos de uso restantes: `usecase/`
+`ListarEventosDisponiveisService` (futuros com lote em estoque; menor preço/soma
+do estoque), `ConsultarEventoService` (todos os lotes; 404 se evento não existe),
+`CadastrarEventoService`, `CriarLoteService` (valida evento, gera N ingressos
+`DISPONIVEL` — RF-23), `ConsultarInscritosService` (ingressos `VENDIDO` de pedido
+`PAGO`). Leituras `@Transactional(readOnly = true)`.
+
+**Épico 4 concluído** (REST + webhook):
+- `adapter/in/web/`: `EventoController` (`GET /api/eventos`, `GET /api/eventos/{id}`),
+  `CompraController` (`POST /api/compras` → 201), `AdminEventoController`
+  (`POST /api/admin/eventos`, `POST /api/admin/eventos/{id}/lotes`,
+  `GET /api/admin/eventos/{id}/inscritos`) e `WebhookPagamentoController`
+  (`POST /api/webhooks/pagamento`). DTOs `record` em `adapter/in/web/dto/`.
+- **Webhook:** header `X-Webhook-Token` = `app.webhook.secret` (`MessageDigest.isEqual`);
+  divergência → `AutenticacaoWebhookException` → 401 (RF-16). Status do gateway
+  traduzido no controller (`approved`→APROVADO, `rejected`/`cancelled`→RECUSADO,
+  resto ignorado com 200). Idempotência real fica no `ConfirmarPagamentoService`.
+- **Rotas `/api/admin/**` ficam ABERTAS** — `// TODO Épico 8: exigir JWT` no
+  controller. Segurança e CORS entram no Épico 8.
+- **OpenAPI/Swagger** (RNF-36): `springdoc-openapi-starter-webmvc-ui` no pom;
+  `config/OpenApiConfig` (bean `OpenAPI`); `/swagger-ui.html` e `/v3/api-docs` em
+  dev, desligados no perfil `prod` via `application.yml`.
+
+**Épico 7 concluído** (scheduler):
+- `config/AgendamentoConfig` (`@EnableScheduling`) e
+  `adapter/in/scheduler/ExpiracaoDeReservasScheduler`
+  (`@Scheduled(fixedDelayString = "${app.reserva.intervalo-varredura}")`, PT1M por
+  padrão; falha na varredura é logada em WARN e não propaga — RNF-28).
+
+**Testes:** 93 verdes — domínio + 8 serviços (Mockito), 4 slices `@WebMvcTest`,
+scheduler unitário, `FluxoDeCompraEmMemoriaTest` e `FluxoDeCompraViaRestTest`
+(`@SpringBootTest` RANDOM_PORT: cadastro → compra → webhook → inscrito, por HTTP).
 
 **Pendente:**
-- `adapter/in` além do handler de erros: controllers REST + webhook (Épico 4) e scheduler (Épico 7).
+- Collection Postman em `docs/postman/` (próximo passo).
 - Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
 
 ## Ordem de trabalho recomendada
@@ -125,8 +155,16 @@
 2. ~~Épico 1 — domínio rico + testes unitários (sem Spring).~~ ✅
 3. ~~Épico 2 — portas (`ports.in`, `ports.out`).~~ ✅
 4. ~~Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake.~~ ✅
-5. Épico 4 + 7 — REST e scheduler → **MVP navegável em perfil `dev`**. ← **próximo**
-6. Épico 8 (segurança JWT) → 9 (PostgreSQL) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy).
+5. ~~Épico 4 + 7 — REST, webhook, Swagger e scheduler → **MVP navegável em perfil `dev`**.~~ ✅
+6. **Collection Postman** (`docs/postman/`) — environment com variáveis/credenciais
+   (`baseUrl`, `webhookSecret`, `adminToken` etc.), todas as requests (compra,
+   consulta, webhook, admin) e um exemplo de response salvo por request. Nasce
+   depois do Épico 4 e é estendida junto com o 7 e o 8. ← **próximo**
+7. Épico 8 (segurança JWT) → 9 (PostgreSQL) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy).
+8. **Frontend** — repositório **separado**, trilha de trabalho paralela que arranca
+   quando houver um contrato estável para consumir (Épico 4 + collection Postman).
+   Backend e frontend são entregas **de igual peso** no TCC; aqui a ordem é só
+   sequenciamento — o backend primeiro porque é o que destrava o resto.
 
 ---
 
