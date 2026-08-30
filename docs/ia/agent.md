@@ -78,16 +78,33 @@
 - `domain/exception/`: `DominioException` (base) + `TransicaoInvalidaException`, `IngressoEsgotadoException`, `RecursoNaoEncontradoException`, traduzidas no `GlobalExceptionHandler` (404 / 409 / 422).
 - Testes unitários do domínio (JUnit 5 + AssertJ, sem Spring).
 
+**Épico 2 concluído:**
+- `ports.out/` (8 interfaces, Java puro): `UsuarioRepositoryPort` (`buscarPorEmail` — RN-4),
+  `EventoRepositoryPort`, `LoteRepositoryPort` (`buscarPorIdComBloqueio` — RNF-07),
+  `IngressoRepositoryPort` (`salvarTodos` — RF-23, `buscarPrimeiroDisponivelDoLote` — RF-06,
+  `listarVendidosDoEvento` — RF-25), `PedidoRepositoryPort` (`listarPendentesCriadosAntesDe` — RF-17),
+  `PagamentoRepositoryPort` (`buscarPorReferenciaGateway` — RF-12), `GatewayPagamentoPort`
+  (+ records `DadosCobranca` / `CobrancaCriada` — RF-09), `NotificacaoPort` (stub — RF-15).
+- `ports.in/` (8 interfaces + records de comando/retorno aninhados): `ListarEventosDisponiveisUseCase`,
+  `ConsultarEventoUseCase`, `ComprarIngressoUseCase`, `ConfirmarPagamentoUseCase` (idempotente),
+  `ExpirarReservasUseCase`, `CadastrarEventoUseCase`, `CriarLoteUseCase`, `ConsultarInscritosUseCase`.
+  Login admin (RF-19) fica para o Épico 8.
+- Ajuste de domínio: `Pagamento` ganhou `referenciaGateway` + `vincularCobranca(String)` (exige
+  `PENDENTE` e não revincula), para correlacionar o webhook (RF-12). `Pagamento.reconstituir` tem novo
+  parâmetro. Decisões: relógio via `java.time.Clock` do JDK direto (sem port); código QR gerado com
+  `UUID` dentro do service (Épico 3, sem port).
+- 50 testes verdes.
+
 **Pendente:**
-- Pacotes `ports`, `usecase`, `config` (e o restante de `adapter`) ainda vazios.
+- Pacotes `usecase`, `config` (e o restante de `adapter`) ainda vazios.
 - Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
 
 ## Ordem de trabalho recomendada
 
 1. ~~Épico 0 — fundação Spring Boot.~~ ✅
 2. ~~Épico 1 — domínio rico + testes unitários (sem Spring).~~ ✅
-3. Épico 2 — portas (`ports.in`, `ports.out`). ← **próximo**
-4. Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake.
+3. ~~Épico 2 — portas (`ports.in`, `ports.out`).~~ ✅
+4. Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake. ← **próximo**
 5. Épico 4 + 7 — REST e scheduler → **MVP navegável em perfil `dev`**.
 6. Épico 8 (segurança JWT) → 9 (PostgreSQL) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy).
 

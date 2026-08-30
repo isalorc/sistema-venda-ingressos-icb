@@ -147,9 +147,22 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
 - Testes unitários do domínio (JUnit 5 + AssertJ, sem Spring) + teste de mapeamento
   das exceções no handler.
 
+**Épico 2 concluído** (portas):
+
+- `ports.out/`: 8 interfaces em Java puro — repositórios (`Usuario`, `Evento`,
+  `Lote` com busca sob bloqueio, `Ingresso`, `Pedido`, `Pagamento`),
+  `GatewayPagamentoPort` (adapter fake no MVP) e `NotificacaoPort` (stub).
+- `ports.in/`: 8 casos de uso com `record`s de comando/retorno — consulta e compra
+  (cliente), confirmação de pagamento (webhook idempotente), expiração de reservas
+  (scheduler) e administração (cadastrar evento, criar lote, consultar inscritos).
+  Login de admin fica para o épico de segurança.
+- `Pagamento` ganhou `referenciaGateway` (+ `vincularCobranca`) para o webhook
+  idempotente. Hora obtida via `java.time.Clock` do JDK; código QR gerado com
+  `UUID` no caso de uso (sem portas dedicadas).
+
 **Ainda pendente:**
 
-- Pacotes `ports`, `usecase`, `config` e o restante de `adapter` ainda vazios.
+- Pacotes `usecase`, `config` e o restante de `adapter` ainda vazios.
 
 ## 11. Como compilar e executar
 
@@ -169,7 +182,7 @@ plano de desenvolvimento. Resumo:
 
 - **Épico 0 (concluído):** Spring Boot no `pom.xml`, `main` como `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros, JaCoCo.
 - **Épico 1 (concluído):** entidades anêmicas → modelo rico (transições de estado, invariantes de estoque, exceções de domínio ligadas ao `GlobalExceptionHandler`) + testes unitários sem Spring.
-- **Épico 2:** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
+- **Épico 2 (concluído):** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
 - **Épico 3:** casos de uso — núcleo em `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
 - **Épicos 4–7:** adapter REST, persistência em memória, gateway fake, scheduler de reservas → MVP navegável.
 - **Épicos 8–11:** segurança JWT, PostgreSQL + Flyway, qualidade/CI (ArchUnit, Jacoco, Testcontainers), Mercado Pago real, deploy.
