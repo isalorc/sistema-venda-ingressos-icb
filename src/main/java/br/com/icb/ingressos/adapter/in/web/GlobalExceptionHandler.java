@@ -4,6 +4,7 @@ import br.com.icb.ingressos.domain.exception.DominioException;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
+import br.com.icb.ingressos.usecase.CredenciaisInvalidasException;
 import jakarta.validation.ConstraintViolationException;
 
 import org.slf4j.Logger;
@@ -113,6 +114,23 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                                                               WebRequest requisicao) {
         return ResponseEntity.unprocessableEntity().body(ErroResponse.de(
                 HttpStatus.UNPROCESSABLE_ENTITY, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    /** Login de admin com e-mail/senha que não conferem (RF-19) → 401. */
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    public ResponseEntity<ErroResponse> tratarCredenciaisInvalidas(CredenciaisInvalidasException excecao,
+                                                                   WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErroResponse.de(
+                HttpStatus.UNAUTHORIZED, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    /** Webhook de pagamento sem segredo válido (RF-16) → 401. */
+    @ExceptionHandler(AutenticacaoWebhookException.class)
+    public ResponseEntity<ErroResponse> tratarWebhookNaoAutenticado(AutenticacaoWebhookException excecao,
+                                                                    WebRequest requisicao) {
+        log.warn("Notificação de webhook rejeitada em {}: segredo inválido.", caminho(requisicao));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ErroResponse.de(
+                HttpStatus.UNAUTHORIZED, excecao.getMessage(), caminho(requisicao)));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

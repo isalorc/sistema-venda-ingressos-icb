@@ -26,7 +26,7 @@ base para os casos de uso (`usecase`) e para o modelo de domínio (`domain`).
 | **RN-2** | Expiração da reserva (TTL) | Reserva não paga expira **15 minutos** após a criação do `Pedido` (status `PENDENTE`). Valor configurável em `application.yml`. Um job periódico libera as reservas expiradas. | — |
 | **RN-3** | Métodos de pagamento | **PIX** e **CARTÃO**. Enum `MetodoPagamento = { PIX, CARTAO }`. | Adicionar **BOLETO** (compensação D+1, TTL de reserva próprio). |
 | **RN-4** | Identificação do cliente | **Sem cadastro/senha.** Na compra o cliente informa **nome, e-mail e telefone**. O sistema cria um `Usuario` novo ou reaproveita um existente pelo **e-mail**. O ingresso/QR é entregue por **e-mail**. | **Conta com login** (e-mail + senha), área autenticada "meus ingressos" e histórico de pedidos. |
-| **RN-5** | Autenticação do administrador | **JWT próprio.** `POST /api/admin/login` (e-mail + senha) retorna um token; todas as rotas `/api/admin/**` exigem o token. Senhas com hash **BCrypt**. Chave/segredo do JWT via variável de ambiente. | Rotação de credenciais, múltiplos perfis de admin, ou login via provedor externo (OAuth2) se necessário. |
+| **RN-5** | Autenticação do administrador | **JWT próprio.** `POST /api/admin/login` (e-mail + senha) retorna um token; todas as rotas `/api/admin/**` exigem o token. Senhas com hash **BCrypt**. **Um único administrador**, provisionado por variável de ambiente (`ADMIN_EMAIL` / `ADMIN_SENHA_HASH`) — sem tela/endpoint de cadastro. Chave/segredo do JWT via variável de ambiente. | Rotação de credenciais, múltiplos perfis de admin (ver "Questões em aberto"), ou login via provedor externo (OAuth2) se necessário. |
 | **RN-6** | Geração do código QR do ingresso | O `codigo_qr` é gerado **somente após a confirmação do pagamento**. Na reserva o ingresso fica `RESERVADO` **sem código**; ao aprovar o pagamento, gera-se um identificador único (UUID / hash assinado) e o status passa a `VENDIDO`. | — |
 
 ## Fluxo de compra (resumo)
@@ -88,3 +88,14 @@ Mapeável para os status do Mercado Pago (`approved`, `rejected`, `pending`,
 
 - **Template do e-mail** de envio do ingresso (RN-4). Até a definição, a porta
   `NotificacaoPort` fica como *stub*.
+
+## Questões em aberto (pensar bem mais pra frente — pode nem fazer sentido)
+
+- **Múltiplos administradores com papéis (RN-5).** Hoje há um admin único vindo de
+  variável de ambiente. *Porém*: talvez faça sentido manter esse admin "raiz"
+  provisionado desde o início e permitir que ele **cadastre outros admins com
+  menos responsabilidades** (ex.: um perfil que só consulta inscritos, sem criar
+  evento/lote). Isso exigiria entidade `Administrador` + papéis + endpoints
+  `POST /api/admin/administradores` protegidos pelo próprio JWT de admin raiz.
+  Não é para o MVP nem para os próximos épicos — anotado só para não perder a
+  ideia. A usuária ainda não decidiu se vale a pena.

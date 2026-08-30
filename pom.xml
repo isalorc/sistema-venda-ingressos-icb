@@ -37,6 +37,32 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <!--
+          Segurança das rotas administrativas (RF-26 / RNF-12): filtro de segurança,
+          BCrypt e CORS. O login emite um JWT próprio assinado com HMAC-SHA256
+          (biblioteca jjwt), validado por um OncePerRequestFilter.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!--
           Gestão declarativa de transações (@Transactional) nos casos de uso.
           Enquanto a persistência é em memória não há um TransactionManager e a
           anotação fica inócua; ao entrar o JPA (Épico 9) ela passa a valer sem
@@ -45,6 +71,43 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-tx</artifactId>
+        </dependency>
+
+        <!--
+          Documentação do contrato da API (OpenAPI 3 + Swagger UI) para consumo
+          pelo time de frontend (RNF-36). Expõe /v3/api-docs e /swagger-ui.html;
+          desligado no perfil prod via application.yml.
+        -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+
+        <!--
+          Persistência PostgreSQL (Épico 9). O núcleo do hexágono segue sem JPA:
+          as entidades @Entity ficam em adapter/out/persistence/jpa, com mappers
+          para o domínio. O adapter em memória continua ativo por padrão; o JPA
+          entra só com app.persistencia=postgres (perfis `prod`/`local`/`it`).
+          No perfil `dev` o autoconfig de DataSource/JPA/Flyway é excluído
+          (application.yml), então o MVP em memória sobe sem banco.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
 
         <dependency>
@@ -58,7 +121,52 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+          Cliente HTTP para os testes de integração ponta a ponta: o TestRestTemplate
+          o detecta e passa a usá-lo no lugar do HttpURLConnection do JDK, que não
+          lê o corpo de respostas 4xx a POSTs com body (ex.: 401 do webhook).
+        -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!--
+          PostgreSQL real e efêmero para os testes de integração da persistência
+          JPA e o teste de concorrência da reserva (RNF-30), SEM Docker: o Zonky
+          baixa um binário nativo do Postgres e o sobe só durante `mvn test`.
+          O binário Linux vem transitivamente de embedded-postgres (usado na CI);
+          o de Windows é declarado abaixo para a máquina de desenvolvimento.
+        -->
+        <dependency>
+            <groupId>io.zonky.test</groupId>
+            <artifactId>embedded-postgres</artifactId>
+            <version>2.0.7</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.zonky.test.postgres</groupId>
+            <artifactId>embedded-postgres-binaries-windows-amd64</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.zonky.test.postgres</groupId>
+                <artifactId>embedded-postgres-binaries-bom</artifactId>
+                <version>16.4.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>

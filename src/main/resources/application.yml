@@ -23,12 +23,42 @@ app:
   reserva:
     # TTL da reserva não paga (RN-2). Formato ISO-8601 Duration.
     ttl: PT15M
+    # Intervalo entre varreduras do scheduler de expiração (RF-17). ISO-8601 Duration.
+    intervalo-varredura: PT1M
+  webhook:
+    # Segredo esperado no header X-Webhook-Token do webhook de pagamento (RF-16).
+    # Em produção vem de variável de ambiente (RNF-13); em dev usa um valor fixo.
+    secret: ${WEBHOOK_SECRET:troque-em-producao}
+  # Autenticação do administrador (RF-19 / RN-5 / RNF-12). Em produção JWT_SECRET,
+  # ADMIN_EMAIL e ADMIN_SENHA_HASH são obrigatórios via ambiente (RNF-13).
+  jwt:
+    secret: ${JWT_SECRET:dev-secret-troque-em-producao-com-32-bytes-no-minimo}
+    # Validade do token a partir da emissão. ISO-8601 Duration.
+    expiracao: PT2H
+  admin:
+    email: ${ADMIN_EMAIL:admin@icb.local}
+    # Hash BCrypt da senha. Em dev corresponde a "admin123".
+    senha-hash: "${ADMIN_SENHA_HASH:$2a$10$ptB66Imh26f.qkhzCyUl5uw7N/8vZ4Oy0JipYcl/valf0JwhqmyB2}"
+  # CORS restrito ao(s) domínio(s) do frontend (RNF-16). Lista separada por vírgula.
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
 
 ---
 spring:
   config:
     activate:
       on-profile: dev
+  # O MVP em `dev` roda com persistência EM MEMÓRIA. Com o starter JPA no
+  # classpath (Épico 9), o autoconfig de banco tentaria abrir um DataSource e
+  # falharia por falta de URL — então é desligado aqui. Nos perfis com banco
+  # (`prod`, `local`, `it`) ele fica ativo.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
 
 logging:
   level:
@@ -36,6 +66,8 @@ logging:
 
 app:
   persistencia: memoria
+  webhook:
+    secret: dev-webhook-secret
 
 ---
 spring:
@@ -43,9 +75,51 @@ spring:
     activate:
       on-profile: prod
 
+  # Banco: Lakebase Postgres no Neon (projeto db_sistema_vendas_icb, branch
+  # `production`, região aws-sa-east-1). Todos os valores vêm do ambiente (RNF-13).
+  #   JDBC_DATABASE_URL          jdbc:postgresql://<host-pooler>/<db>?sslmode=require
+  #   JDBC_DATABASE_URL_UNPOOLED jdbc:postgresql://<host-direct>/<db>?sslmode=require
+  #   DATABASE_USERNAME / DATABASE_PASSWORD
+  datasource:
+    url: ${JDBC_DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 0
+      idle-timeout: 60000
+      keepalive-time: 30000
+      connection-timeout: 10000
+
+  jpa:
+    hibernate:
+      # O schema é 100% do Flyway; o Hibernate nunca mexe em DDL.
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    # Migrações pela conexão DIRECT (sem -pooler): exigência do PgBouncer do Neon.
+    url: ${JDBC_DATABASE_URL_UNPOOLED}
+    user: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
 logging:
   level:
     br.com.icb.ingressos: INFO
 
 app:
   persistencia: postgres
+  # Em produção, obrigatórios por ambiente (RNF-13) — sem default utilizável:
+  #   JWT_SECRET, ADMIN_EMAIL, ADMIN_SENHA_HASH, CORS_ORIGINS, WEBHOOK_SECRET
+
+# Contrato OpenAPI só é publicado fora de produção (RNF-36 atende o time de frontend).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

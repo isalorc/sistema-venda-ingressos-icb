@@ -200,15 +200,47 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
 - `adapter/out/notification/NotificacaoPorLog` (`@Component`): *stub* que apenas
   registra em log o envio do ingresso, até a definição do template de e-mail.
 
-**Cobertura de testes:** 64 testes verdes — unitários do domínio e dos 3 serviços
-(Mockito + `Clock.fixed`) e um teste de integração `@SpringBootTest`
-(`FluxoDeCompraEmMemoriaTest`) que exercita compra → webhook aprovado → reentrega
-idempotente sobre os adapters reais em memória.
+**Épicos 3 (complemento), 4 e 7 concluídos** (MVP navegável):
+
+- `usecase/`: os 5 casos de uso restantes — listar eventos disponíveis, consultar
+  evento, cadastrar evento, criar lote (gera os ingressos — RF-23) e consultar
+  inscritos.
+- `adapter/in/web/`: `EventoController` (`GET /api/eventos`, `/{id}`),
+  `CompraController` (`POST /api/compras`), `AdminEventoController`
+  (`POST /api/admin/eventos`, `.../{id}/lotes`, `GET .../{id}/inscritos`) e
+  `WebhookPagamentoController` (`POST /api/webhooks/pagamento`). DTOs `record` em
+  `adapter/in/web/dto/`. O webhook autentica pelo header `X-Webhook-Token`
+  (`app.webhook.secret`) → 401 se inválido (RF-16), traduz o status do gateway e é
+  idempotente.
+- `adapter/in/scheduler/ExpiracaoDeReservasScheduler` + `config/AgendamentoConfig`
+  (`@EnableScheduling`): varre reservas vencidas a cada `app.reserva.intervalo-varredura`.
+- **OpenAPI/Swagger** (RNF-36) via `springdoc`: `/swagger-ui.html` e `/v3/api-docs`
+  em dev (desligados no perfil `prod`).
+
+**Épico 8 concluído** (segurança admin — RF-19 / RF-26 / RNF-12 / RNF-16):
+
+- `POST /api/admin/login` (e-mail + senha BCrypt) devolve um **JWT** próprio
+  (jjwt, HMAC). Credencial de um administrador em variáveis de ambiente
+  (`app.admin.*`); em dev, `admin@icb.local` / `admin123`.
+- `config/SecurityConfig`: API stateless; `/api/admin/**` (exceto o login) exige
+  o token via `Authorization: Bearer` (papel `ROLE_ADMIN`); consulta, compra,
+  webhook, health e Swagger seguem **públicos**. 401/403 no mesmo formato de erro.
+- **CORS** restrito a `app.cors.allowed-origins` (env; dev `http://localhost:5173`).
+- Porta `ports.out/TokenAdminPort` (impl `adapter/out/security/JwtTokenAdmin`)
+  isola a biblioteca de token.
+
+**Cobertura de testes:** 109 testes verdes — domínio, 9 serviços, slices
+`@WebMvcTest`, scheduler, `JwtTokenAdminTest`, e testes `@SpringBootTest`
+(`FluxoDeCompraViaRestTest` ponta a ponta por HTTP com login; `SegurancaAdminTest`
+para 401 sem token, login, token válido e preflight CORS).
+
+**Collection Postman:** `docs/postman/` — collection (todas as requests, incluindo
+**Admin · Login**, com scripts que encadeiam variáveis e token e um exemplo de
+response por request), environment `dev` e `README.md`. Validada com `newman`.
 
 **Ainda pendente:**
 
-- `adapter/in` além do handler de erros (controllers REST e webhook — Épico 4) e o
-  scheduler de expiração (Épico 7).
+- PostgreSQL + Flyway + lock pessimista real (RNF-07/RNF-11) — Épico 9 (próximo).
 
 ## 11. Como compilar e executar
 
@@ -220,6 +252,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev   # sobe a API em http://loca
 ```
 
 Verificação: `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`.
+Contrato da API: <http://localhost:8080/swagger-ui.html> (perfil `dev`).
 
 ## 12. Próximos passos (backlog técnico)
 
@@ -229,11 +262,14 @@ plano de desenvolvimento. Resumo:
 - **Épico 0 (concluído):** Spring Boot no `pom.xml`, `main` como `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros, JaCoCo.
 - **Épico 1 (concluído):** entidades anêmicas → modelo rico (transições de estado, invariantes de estoque, exceções de domínio ligadas ao `GlobalExceptionHandler`) + testes unitários sem Spring.
 - **Épico 2 (concluído):** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
-- **Épico 3 (concluído):** casos de uso — `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
+- **Épico 3 (concluído):** casos de uso — os 3 serviços de fluxo (`ComprarIngressoService`, `ConfirmarPagamentoService` idempotente, `ExpirarReservasService`) e os 5 de consulta/administração.
 - **Épico 5 (concluído):** persistência em memória (`RepositorioEmMemoria` + 6 adapters `*RepositoryEmMemoria`). Lock pessimista real adiado para o Épico 9.
 - **Épico 6.1 (concluído):** `GatewayPagamentoFake` e `NotificacaoPorLog` (stub).
-- **Épicos 4 e 7 (próximo):** adapter REST + webhook e scheduler de expiração → MVP navegável em `dev`.
-- **Épicos 8–11:** segurança JWT, PostgreSQL + Flyway, qualidade/CI (ArchUnit, Jacoco, Testcontainers), Mercado Pago real, deploy.
+- **Épicos 4 e 7 (concluídos):** controllers REST + webhook (autenticado por segredo, idempotente), scheduler de expiração e contrato OpenAPI/Swagger → **MVP navegável em `dev`**.
+- **Épico 8 (concluído):** login do administrador (`POST /api/admin/login` → JWT próprio, senha BCrypt), proteção das rotas `/api/admin/**` e CORS restrito.
+- **Collection Postman** (`docs/postman/`) **concluída:** environment, todas as requests (login, compra, consulta, webhook, admin) com um exemplo de response salvo por request. Validada com `newman`.
+- **Épicos 9–11 (próximo: 9):** PostgreSQL + Flyway + lock pessimista, qualidade/CI (ArchUnit, Jacoco, Testcontainers), Mercado Pago real, deploy.
+- **Frontend:** repositório **separado**, trilha paralela que arranca quando houver um contrato estável para consumir (contrato do Épico 4 + collection Postman). Backend e frontend têm **igual peso** na entrega do TCC — trabalhar o backend primeiro neste repo é apenas sequenciamento.
 
 ## 13. Referências bibliográficas
 
