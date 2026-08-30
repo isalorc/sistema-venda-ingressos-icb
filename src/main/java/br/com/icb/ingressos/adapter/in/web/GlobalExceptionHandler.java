@@ -1,5 +1,9 @@
 package br.com.icb.ingressos.adapter.in.web;
 
+import br.com.icb.ingressos.domain.exception.DominioException;
+import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
+import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
+import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import jakarta.validation.ConstraintViolationException;
 
 import org.slf4j.Logger;
@@ -24,9 +28,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * das exceções nativas do Spring MVC (rota inexistente, método não suportado,
  * JSON malformado etc.), apenas trocando o corpo da resposta pelo formato padrão.
  *
- * <p>Handlers para as exceções de domínio ({@code IngressoEsgotadoException},
- * {@code RecursoNaoEncontradoException} etc.) são adicionados no Épico 1, quando
- * essas classes passam a existir.
+ * <p>As exceções de domínio ({@link DominioException} e subtipos) são traduzidas
+ * abaixo: recurso inexistente &rarr; 404, violação de invariante de estado ou
+ * estoque &rarr; 409, demais violações de regra &rarr; 422.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -77,6 +81,38 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 "Um ou mais parâmetros são inválidos.",
                 caminho(requisicao),
                 campos));
+    }
+
+    /** Entidade referenciada não existe (RN — compra de lote inexistente etc.). */
+    @ExceptionHandler(RecursoNaoEncontradoException.class)
+    public ResponseEntity<ErroResponse> tratarRecursoNaoEncontrado(RecursoNaoEncontradoException excecao,
+                                                                   WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErroResponse.de(
+                HttpStatus.NOT_FOUND, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    /** Lote esgotado (RN-1) → 409, conforme {@code docs/regrasDeNegocio.md}. */
+    @ExceptionHandler(IngressoEsgotadoException.class)
+    public ResponseEntity<ErroResponse> tratarIngressoEsgotado(IngressoEsgotadoException excecao,
+                                                               WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErroResponse.de(
+                HttpStatus.CONFLICT, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    /** Transição de estado não permitida pela máquina de estados → 409 (conflito com o estado atual). */
+    @ExceptionHandler(TransicaoInvalidaException.class)
+    public ResponseEntity<ErroResponse> tratarTransicaoInvalida(TransicaoInvalidaException excecao,
+                                                                WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErroResponse.de(
+                HttpStatus.CONFLICT, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    /** Fallback para qualquer outra violação de regra de negócio → 422. */
+    @ExceptionHandler(DominioException.class)
+    public ResponseEntity<ErroResponse> tratarViolacaoDeRegra(DominioException excecao,
+                                                              WebRequest requisicao) {
+        return ResponseEntity.unprocessableEntity().body(ErroResponse.de(
+                HttpStatus.UNPROCESSABLE_ENTITY, excecao.getMessage(), caminho(requisicao)));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

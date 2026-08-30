@@ -126,14 +126,29 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
   e `prod` (`postgres`); Actuator expõe `health,info,metrics`; `app.reserva.ttl=PT15M` (RN-2).
 - `adapter/in/web/`: `GlobalExceptionHandler` (`@RestControllerAdvice` estendendo
   `ResponseEntityExceptionHandler`) + `ErroResponse` (record) — respostas de erro
-  padronizadas para 404/405/415/422/500. Handlers das exceções de domínio entram no Épico 1.
+  padronizadas para 404/405/415/422/500.
 - `.editorconfig` adicionado.
+
+**Épico 1 concluído** (domínio rico):
+
+- `domain/`: 6 entidades com comportamento e sem `@Setter` público (`@Getter` +
+  `@EqualsAndHashCode` por id). Criação via fábricas estáticas `novo(...)` /
+  `reconstituir(...)`; guard clauses (`Validacao`, pacote-privada) na construção.
+  - `Lote`: invariante de estoque `0 <= disponivel <= total`; `reservarUnidade()` /
+    `liberarUnidade()` unitários (RN-1).
+  - `Ingresso`, `Pedido`, `Pagamento`: máquinas de estado de
+    `docs/regrasDeNegocio.md` (`reservar` / `confirmarVenda` / `liberarReserva` /
+    `utilizar`; `marcarPago` / `cancelar` / `expirar` / `reservaExpirada`;
+    `aprovar` / `recusar` / `cancelar`).
+  - Enums: `StatusPedido.EXPIRADO` adicionado; `MetodoPagamento.BOLETO` removido (RN-3).
+- `domain/exception/`: `DominioException` (base) + `TransicaoInvalidaException`,
+  `IngressoEsgotadoException`, `RecursoNaoEncontradoException`. `GlobalExceptionHandler`
+  as traduz para 404 / 409 / 422.
+- Testes unitários do domínio (JUnit 5 + AssertJ, sem Spring) + teste de mapeamento
+  das exceções no handler.
 
 **Ainda pendente:**
 
-- `domain/`: 6 entidades **anêmicas** (`@Getter/@Setter` via Lombok) — `Usuario`,
-  `Evento`, `Lote`, `Ingresso`, `Pedido`, `Pagamento` — e enums em `domain/enums/`.
-  Alvo (Épico 1): modelo rico. Ajustes: `StatusPedido.EXPIRADO`, remover `MetodoPagamento.BOLETO`.
 - Pacotes `ports`, `usecase`, `config` e o restante de `adapter` ainda vazios.
 
 ## 11. Como compilar e executar
@@ -153,7 +168,7 @@ O backlog completo (Épicos 0 a 11, sequência de execução e marco de MVP) est
 plano de desenvolvimento. Resumo:
 
 - **Épico 0 (concluído):** Spring Boot no `pom.xml`, `main` como `@SpringBootApplication`, `application.yml` (perfis dev/prod), tratamento global de erros, JaCoCo.
-- **Épico 1:** transformar as entidades anêmicas em modelo rico (transições de estado, invariantes de estoque, exceções de domínio) + testes.
+- **Épico 1 (concluído):** entidades anêmicas → modelo rico (transições de estado, invariantes de estoque, exceções de domínio ligadas ao `GlobalExceptionHandler`) + testes unitários sem Spring.
 - **Épico 2:** portas de entrada (`ports.in`) e de saída (`ports.out`), incluindo `GatewayPagamentoPort` e busca com bloqueio.
 - **Épico 3:** casos de uso — núcleo em `ComprarIngressoService`, `ConfirmarPagamentoService` (idempotente) e `ExpirarReservasService`.
 - **Épicos 4–7:** adapter REST, persistência em memória, gateway fake, scheduler de reservas → MVP navegável.

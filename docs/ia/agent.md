@@ -65,21 +65,28 @@
 - `pom.xml`: Spring Boot 3.3.5 (`spring-boot-starter-parent`), starters `web` + `validation` + `actuator` + `test`, Lombok, plugins `spring-boot` e `jacoco`. Single POM. Build com `mvn` (Maven 3.9+ no PATH — sem wrapper).
 - `br.com.icb.ingressos.SistemaVendaIngressosApplication` — `@SpringBootApplication` no **pacote raiz**.
 - `application.yml` — perfis `dev` (padrão, `app.persistencia=memoria`) e `prod` (`postgres`); Actuator expõe `health,info,metrics`; `app.reserva.ttl=PT15M` (RN-2).
-- `adapter/in/web/`: `GlobalExceptionHandler` (estende `ResponseEntityExceptionHandler`) + `ErroResponse` (record). Respostas de erro padronizadas; handlers das exceções de **domínio entram no Épico 1**.
+- `adapter/in/web/`: `GlobalExceptionHandler` (estende `ResponseEntityExceptionHandler`) + `ErroResponse` (record). Respostas de erro padronizadas.
 - `.editorconfig`.
 
+**Épico 1 concluído:**
+- `domain/`: 6 entidades **ricas** — sem `@Setter` público, criação por fábricas `novo(...)` / `reconstituir(...)`, guard clauses em `Validacao` (pacote-privada). Métodos de negócio implementando as máquinas de estado de `../regrasDeNegocio.md`:
+  - `Lote`: `reservarUnidade()` / `liberarUnidade()` (unitário, RN-1), invariante `0 <= disponivel <= total`.
+  - `Ingresso`: `reservar` / `confirmarVenda` / `liberarReserva` / `utilizar`.
+  - `Pedido`: `marcarPago` / `cancelar` / `expirar` / `reservaExpirada(referencia, ttl)`.
+  - `Pagamento`: `aprovar(data)` / `recusar` / `cancelar`.
+- Enums: `StatusPedido.EXPIRADO` adicionado; `MetodoPagamento.BOLETO` removido.
+- `domain/exception/`: `DominioException` (base) + `TransicaoInvalidaException`, `IngressoEsgotadoException`, `RecursoNaoEncontradoException`, traduzidas no `GlobalExceptionHandler` (404 / 409 / 422).
+- Testes unitários do domínio (JUnit 5 + AssertJ, sem Spring).
+
 **Pendente:**
-- `domain/`: 6 entidades **anêmicas** (`@Getter/@Setter/@AllArgsConstructor` via Lombok) — `Usuario`, `Evento`, `Lote`, `Ingresso`, `Pedido`, `Pagamento` — e os enums em `domain/enums/`.
-  - Alvo (Épico 1): **modelo rico** — métodos de negócio (`reservar`, `confirmarVenda`, `liberarReserva`, `decrementarDisponivel`, `marcarPago`, `expirar`…), guard clauses nas transições, remover `@Setter` público.
-  - Ajustes: adicionar `StatusPedido.EXPIRADO`; remover `MetodoPagamento.BOLETO`.
 - Pacotes `ports`, `usecase`, `config` (e o restante de `adapter`) ainda vazios.
 - Backlog técnico completo (Épicos 0 a 11): resumo em `../documentacaoProjeto.md` seção 12.
 
 ## Ordem de trabalho recomendada
 
-1. Épico 0 — fundação Spring Boot (pom, `@SpringBootApplication`, `application.yml` com perfis `dev`/`prod`, `@RestControllerAdvice`).
-2. Épico 1 — domínio rico + testes unitários (sem Spring).
-3. Épico 2 — portas (`ports.in`, `ports.out`).
+1. ~~Épico 0 — fundação Spring Boot.~~ ✅
+2. ~~Épico 1 — domínio rico + testes unitários (sem Spring).~~ ✅
+3. Épico 2 — portas (`ports.in`, `ports.out`). ← **próximo**
 4. Épico 3 + 5 + 6.1 — casos de uso, repositórios em memória, gateway fake.
 5. Épico 4 + 7 — REST e scheduler → **MVP navegável em perfil `dev`**.
 6. Épico 8 (segurança JWT) → 9 (PostgreSQL) → 10 (CI/qualidade) → 6.3 (Mercado Pago real) → 11 (deploy).
