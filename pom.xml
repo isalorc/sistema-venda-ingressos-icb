@@ -183,6 +183,25 @@
                 </configuration>
             </plugin>
 
+            <!--
+              Permite rodar as migrações sem subir a aplicação:
+                mvn flyway:migrate -Dflyway.url=... -Dflyway.user=... -Dflyway.password=...
+                mvn flyway:info    (mesmos -D)   -> estado das migrações no banco
+              Útil para provisionar uma branch nova do Neon ou conferir o histórico.
+              Em runtime, quem aplica as migrações é o Spring Boot (spring.flyway.*).
+            -->
+            <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.flywaydb</groupId>
+                        <artifactId>flyway-database-postgresql</artifactId>
+                        <version>${flyway.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
