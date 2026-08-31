@@ -16,8 +16,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/actuator/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["actuator", "health"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
             },
             "description": "Liveness/readiness da aplicação (RNF-25)."
           },
@@ -29,14 +34,24 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/actuator/health",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["actuator", "health"]
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "actuator",
+                    "health"
+                  ]
                 }
               },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/vnd.spring-boot.actuator.v3+json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/vnd.spring-boot.actuator.v3+json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"status\": \"UP\"\n}"
             }
@@ -49,8 +64,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/v3/api-docs",
-              "host": ["{{baseUrl}}"],
-              "path": ["v3", "api-docs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
             },
             "description": "Documento OpenAPI 3 gerado pelo springdoc (RNF-36). A UI navegável fica em `{{baseUrl}}/swagger-ui.html`."
           },
@@ -83,16 +103,31 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"senha\": \"{{adminSenha}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "login"
+              ]
             },
             "description": "RF-19 / RN-5. Rota pública. Guarda o token em `adminToken` (usado no header `Authorization: Bearer` das demais rotas admin). O token expira em 2h (`app.jwt.expiracao`)."
           },
@@ -101,14 +136,37 @@
               "name": "200 OK",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@icb.local\",\n  \"senha\": \"admin123\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/admin/login", "host": ["{{baseUrl}}"], "path": ["api", "admin", "login"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@icb.local\",\n  \"senha\": \"admin123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "login"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"token\": \"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkBpY2IubG9jYWwi...\",\n  \"tipo\": \"Bearer\",\n  \"expiraEmSegundos\": 7200\n}"
             },
@@ -116,14 +174,37 @@
               "name": "401 — credencial inválida",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@icb.local\",\n  \"senha\": \"errada\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/admin/login", "host": ["{{baseUrl}}"], "path": ["api", "admin", "login"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@icb.local\",\n  \"senha\": \"errada\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "login"
+                  ]
+                }
               },
               "status": "Unauthorized",
               "code": 401,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T18:00:00Z\",\n  \"status\": 401,\n  \"erro\": \"Unauthorized\",\n  \"mensagem\": \"E-mail ou senha invalidos.\",\n  \"caminho\": \"/api/admin/login\"\n}"
             }
@@ -159,18 +240,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nome\": \"Congresso de Louvor 2026\",\n  \"descricao\": \"Conferencia anual de louvor e adoracao da ICB\",\n  \"dataHora\": \"{{dataHoraEvento}}\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/eventos",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "eventos"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos"
+              ]
             },
             "description": "RF-20. Requer `Authorization: Bearer {{adminToken}}` (rode o Login antes)."
           },
@@ -179,16 +276,40 @@
               "name": "201 Created",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"nome\": \"Congresso de Louvor 2026\",\n  \"descricao\": \"Conferencia anual de louvor e adoracao da ICB\",\n  \"dataHora\": \"2026-12-20T19:00:00\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/admin/eventos", "host": ["{{baseUrl}}"], "path": ["api", "admin", "eventos"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"Congresso de Louvor 2026\",\n  \"descricao\": \"Conferencia anual de louvor e adoracao da ICB\",\n  \"dataHora\": \"2026-12-20T19:00:00\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/eventos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "eventos"
+                  ]
+                }
               },
               "status": "Created",
               "code": 201,
               "_postman_previewlanguage": "json",
               "header": [
-                { "key": "Content-Type", "value": "application/json" },
-                { "key": "Location", "value": "/api/eventos/1" }
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Location",
+                  "value": "/api/eventos/1"
+                }
               ],
               "cookie": [],
               "body": "{\n  \"id\": 1\n}"
@@ -213,36 +334,80 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 60.00,\n  \"quantidadeTotal\": 100\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}/lotes",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "eventos", "{{eventoId}}", "lotes"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}",
+                "lotes"
+              ]
             },
-            "description": "RF-22 / RF-23: cria o lote e gera `quantidadeTotal` ingressos DISPONIVEL. Requer token de admin."
+            "description": "RF-22 / RF-23: cria o lote e gera `quantidadeTotal` ingressos DISPONIVEL. Requer token de admin. Campos opcionais `inicioVendas` / `fimVendas` (ISO-8601, sem fuso) controlam a virada de lote — ver docs/viradaDeLote.md."
           },
           "response": [
             {
               "name": "201 Created",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 60.00,\n  \"quantidadeTotal\": 100\n}" },
-                "url": { "raw": "{{baseUrl}}/api/admin/eventos/1/lotes", "host": ["{{baseUrl}}"], "path": ["api", "admin", "eventos", "1", "lotes"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 60.00,\n  \"quantidadeTotal\": 100\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/eventos/1/lotes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "eventos",
+                    "1",
+                    "lotes"
+                  ]
+                }
               },
               "status": "Created",
               "code": 201,
               "_postman_previewlanguage": "json",
               "header": [
-                { "key": "Content-Type", "value": "application/json" },
-                { "key": "Location", "value": "/api/eventos/1" }
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Location",
+                  "value": "/api/eventos/1"
+                }
               ],
               "cookie": [],
               "body": "{\n  \"id\": 1\n}"
@@ -251,16 +416,121 @@
               "name": "404 — evento inexistente",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 60.00,\n  \"quantidadeTotal\": 100\n}" },
-                "url": { "raw": "{{baseUrl}}/api/admin/eventos/99/lotes", "host": ["{{baseUrl}}"], "path": ["api", "admin", "eventos", "99", "lotes"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 60.00,\n  \"quantidadeTotal\": 100\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/eventos/99/lotes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "eventos",
+                    "99",
+                    "lotes"
+                  ]
+                }
               },
               "status": "Not Found",
               "code": 404,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T17:32:16Z\",\n  \"status\": 404,\n  \"erro\": \"Not Found\",\n  \"mensagem\": \"Evento nao encontrado(a): 99\",\n  \"caminho\": \"/api/admin/eventos/99/lotes\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Admin · Listar eventos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('o evento criado aparece com o lote contabilizado', function () {",
+                  "  var alvo = pm.response.json().find(function (e) { return e.id === Number(pm.environment.get('eventoId')); });",
+                  "  pm.expect(alvo, 'evento na lista').to.be.an('object');",
+                  "  pm.expect(alvo.quantidadeLotes).to.be.at.least(1);",
+                  "});",
+                  "pm.test('traz o statusVendas', function () {",
+                  "  var alvo = pm.response.json().find(function (e) { return e.id === Number(pm.environment.get('eventoId')); });",
+                  "  pm.expect(alvo.statusVendas).to.equal('A_VENDA');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/eventos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos"
+              ]
+            },
+            "description": "RF-21: lista TODOS os eventos (inclusive sem lote e ja ocorridos), do mais recente para o mais antigo, com o resumo dos lotes. Requer token de admin."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/eventos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "eventos"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[\n  {\n    \"id\": 1,\n    \"nome\": \"Congresso de Louvor 2026\",\n    \"descricao\": \"Conferencia anual\",\n    \"dataHora\": \"2026-12-20T19:00:00\",\n    \"dataFim\": null,\n    \"imagemUrl\": null,\n    \"cancelado\": false,\n    \"jaOcorreu\": false,\n    \"quantidadeLotes\": 1,\n    \"ingressosTotais\": 100,\n    \"ingressosDisponiveis\": 100,\n    \"statusVendas\": \"A_VENDA\"\n  }\n]"
             }
           ]
         },
@@ -286,8 +556,13 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/eventos",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "eventos"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eventos"
+              ]
             },
             "description": "RF-01. Só eventos futuros com ao menos um lote com estoque. `menorPreco` e `ingressosDisponiveis` consideram apenas os lotes com estoque."
           },
@@ -297,14 +572,28 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/eventos", "host": ["{{baseUrl}}"], "path": ["api", "eventos"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/eventos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "eventos"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 1,\n    \"nome\": \"Congresso de Louvor 2026\",\n    \"descricao\": \"Conferencia anual de louvor e adoracao da ICB\",\n    \"dataHora\": \"2026-12-20T19:00:00\",\n    \"menorPreco\": 60.00,\n    \"ingressosDisponiveis\": 100\n  }\n]"
+              "body": "[\n  {\n    \"id\": 1,\n    \"nome\": \"Congresso de Louvor 2026\",\n    \"descricao\": \"Conferencia anual\",\n    \"dataHora\": \"2026-12-20T19:00:00\",\n    \"dataFim\": null,\n    \"imagemUrl\": null,\n    \"menorPreco\": 60.00,\n    \"ingressosDisponiveis\": 100,\n    \"statusVendas\": \"A_VENDA\",\n    \"aberturaVendas\": null\n  }\n]"
             }
           ]
         },
@@ -317,7 +606,12 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
-                  "pm.test('traz os lotes', function () { pm.expect(pm.response.json().lotes).to.be.an('array').that.is.not.empty; });"
+                  "pm.test('traz os lotes com status derivado', function () {",
+                  "  var lotes = pm.response.json().lotes;",
+                  "  pm.expect(lotes).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(lotes[0]).to.have.property('status');",
+                  "  pm.expect(lotes.some(function (l) { return l.status === 'A_VENDA'; }), 'ha um lote A_VENDA').to.be.true;",
+                  "});"
                 ]
               }
             }
@@ -327,10 +621,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/eventos/{{eventoId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "eventos", "{{eventoId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eventos",
+                "{{eventoId}}"
+              ]
             },
-            "description": "RF-02. Retorna todos os lotes do evento (inclusive esgotados)."
+            "description": "RF-02. Retorna todos os lotes do evento, cada um com o `status` derivado da virada de lote (A_VENDA / AGENDADO / ENCERRADO / ESGOTADO / NA_FILA) e a janela `inicioVendas`/`fimVendas`."
           },
           "response": [
             {
@@ -338,26 +638,56 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/eventos/1", "host": ["{{baseUrl}}"], "path": ["api", "eventos", "1"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/eventos/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "eventos",
+                    "1"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"nome\": \"Congresso de Louvor 2026\",\n  \"descricao\": \"Conferencia anual de louvor e adoracao da ICB\",\n  \"dataHora\": \"2026-12-20T19:00:00\",\n  \"lotes\": [\n    {\n      \"id\": 1,\n      \"nome\": \"1o Lote - Inteira\",\n      \"preco\": 60.00,\n      \"quantidadeDisponivel\": 100\n    }\n  ]\n}"
+              "body": "{\n  \"id\": 1,\n  \"nome\": \"Congresso de Louvor 2026\",\n  \"descricao\": \"Conferencia anual\",\n  \"dataHora\": \"2026-12-20T19:00:00\",\n  \"dataFim\": null,\n  \"imagemUrl\": null,\n  \"cancelado\": false,\n  \"lotes\": [\n    { \"id\": 1, \"nome\": \"1o Lote - Inteira\", \"preco\": 60.00, \"quantidadeDisponivel\": 100, \"status\": \"A_VENDA\", \"inicioVendas\": null, \"fimVendas\": null }\n  ]\n}"
             },
             {
               "name": "404 — evento inexistente",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/eventos/99", "host": ["{{baseUrl}}"], "path": ["api", "eventos", "99"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/eventos/99",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "eventos",
+                    "99"
+                  ]
+                }
               },
               "status": "Not Found",
               "code": 404,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T17:32:17Z\",\n  \"status\": 404,\n  \"erro\": \"Not Found\",\n  \"mensagem\": \"Evento nao encontrado(a): 99\",\n  \"caminho\": \"/api/eventos/99\"\n}"
             }
@@ -386,16 +716,30 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"loteId\": {{loteId}},\n  \"nome\": \"Ana Testadora\",\n  \"email\": \"ana.testadora@exemplo.com\",\n  \"telefone\": \"11988887777\",\n  \"metodoPagamento\": \"PIX\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/compras",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "compras"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "compras"
+              ]
             },
             "description": "RF-04 a RF-10. Resolve o cliente pelo e-mail (RN-4), reserva um ingresso do lote, cria Pedido + Pagamento PENDENTE e pede a cobrança ao gateway. `metodoPagamento`: `PIX` ou `CARTAO`."
           },
@@ -404,16 +748,39 @@
               "name": "201 Created",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"loteId\": 1,\n  \"nome\": \"Ana Testadora\",\n  \"email\": \"ana.testadora@exemplo.com\",\n  \"telefone\": \"11988887777\",\n  \"metodoPagamento\": \"PIX\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/compras", "host": ["{{baseUrl}}"], "path": ["api", "compras"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"loteId\": 1,\n  \"nome\": \"Ana Testadora\",\n  \"email\": \"ana.testadora@exemplo.com\",\n  \"telefone\": \"11988887777\",\n  \"metodoPagamento\": \"PIX\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/compras",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "compras"
+                  ]
+                }
               },
               "status": "Created",
               "code": 201,
               "_postman_previewlanguage": "json",
               "header": [
-                { "key": "Content-Type", "value": "application/json" },
-                { "key": "Location", "value": "/api/pedidos/1" }
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Location",
+                  "value": "/api/pedidos/1"
+                }
               ],
               "cookie": [],
               "body": "{\n  \"pedidoId\": 1,\n  \"ingressoId\": 1,\n  \"valorTotal\": 60.00,\n  \"statusPedido\": \"PENDENTE\",\n  \"urlPagamento\": \"https://pagamento.fake/checkout/fake-cd5aecdb-afa6-46f7-8879-79825e53b196\",\n  \"qrCodePix\": \"00020126FAKE-PIX-fake-cd5aecdb-afa6-46f7-8879-79825e53b196\"\n}"
@@ -422,14 +789,36 @@
               "name": "404 — lote inexistente",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"loteId\": 9999,\n  \"nome\": \"Ana\",\n  \"email\": \"ana@exemplo.com\",\n  \"telefone\": \"11999990000\",\n  \"metodoPagamento\": \"PIX\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/compras", "host": ["{{baseUrl}}"], "path": ["api", "compras"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"loteId\": 9999,\n  \"nome\": \"Ana\",\n  \"email\": \"ana@exemplo.com\",\n  \"telefone\": \"11999990000\",\n  \"metodoPagamento\": \"PIX\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/compras",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "compras"
+                  ]
+                }
               },
               "status": "Not Found",
               "code": 404,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T17:32:17Z\",\n  \"status\": 404,\n  \"erro\": \"Not Found\",\n  \"mensagem\": \"Lote nao encontrado(a): 9999\",\n  \"caminho\": \"/api/compras\"\n}"
             }
@@ -452,18 +841,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Webhook-Token", "value": "{{webhookSecret}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Token",
+                "value": "{{webhookSecret}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"referenciaGateway\": \"{{referenciaGateway}}\",\n  \"status\": \"approved\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/pagamento",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "webhooks", "pagamento"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "pagamento"
+              ]
             },
             "description": "RF-11 a RF-16. Aprovado: Pagamento APROVADO, Pedido PAGO, Ingresso VENDIDO com codigo QR (RN-6). Idempotente: reentregas não geram efeito duplicado. O header `X-Webhook-Token` deve casar com `app.webhook.secret`."
           },
@@ -473,11 +878,30 @@
               "originalRequest": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "X-Webhook-Token", "value": "{{webhookSecret}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Webhook-Token",
+                    "value": "{{webhookSecret}}"
+                  }
                 ],
-                "body": { "mode": "raw", "raw": "{\n  \"referenciaGateway\": \"fake-cd5aecdb-afa6-46f7-8879-79825e53b196\",\n  \"status\": \"approved\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/webhooks/pagamento", "host": ["{{baseUrl}}"], "path": ["api", "webhooks", "pagamento"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"referenciaGateway\": \"fake-cd5aecdb-afa6-46f7-8879-79825e53b196\",\n  \"status\": \"approved\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/webhooks/pagamento",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "pagamento"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
@@ -509,12 +933,23 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}/inscritos",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "eventos", "{{eventoId}}", "inscritos"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}",
+                "inscritos"
+              ]
             },
             "description": "RF-25. Clientes com pedido PAGO e o ingresso VENDIDO correspondente. Antes da confirmação do pagamento a lista vem vazia. Requer token de admin."
           },
@@ -524,12 +959,29 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/admin/eventos/1/inscritos", "host": ["{{baseUrl}}"], "path": ["api", "admin", "eventos", "1", "inscritos"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/eventos/1/inscritos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "eventos",
+                    "1",
+                    "inscritos"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "[\n  {\n    \"nomeCliente\": \"Ana Testadora\",\n    \"emailCliente\": \"ana.testadora@exemplo.com\",\n    \"telefoneCliente\": \"11988887777\",\n    \"loteId\": 1,\n    \"nomeLote\": \"1o Lote - Inteira\",\n    \"pedidoId\": 1,\n    \"codigoQr\": \"f327181d-2a3f-488c-aea3-c0bc1c29f379\",\n    \"dataCompra\": \"2026-08-30T14:07:01.146946\"\n  }\n]"
             }
@@ -560,16 +1012,30 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"loteId\": {{loteId}},\n  \"nome\": \"Bruno Comprador\",\n  \"email\": \"bruno.comprador@exemplo.com\",\n  \"telefone\": \"11977776666\",\n  \"metodoPagamento\": \"CARTAO\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/compras",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "compras"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "compras"
+              ]
             },
             "description": "Gera um novo Pagamento PENDENTE para exercitar os cenários de webhook abaixo. Com CARTAO o `qrCodePix` vem nulo e só há `urlPagamento`."
           },
@@ -591,18 +1057,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Webhook-Token", "value": "{{webhookSecret}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Token",
+                "value": "{{webhookSecret}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"referenciaGateway\": \"{{referenciaGateway}}\",\n  \"status\": \"rejected\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/pagamento",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "webhooks", "pagamento"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "pagamento"
+              ]
             },
             "description": "RF-14: libera a reserva do ingresso, repõe o estoque do lote e cancela o pagamento e o pedido. `status` aceito: `rejected`, `cancelled`."
           },
@@ -612,11 +1094,30 @@
               "originalRequest": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "X-Webhook-Token", "value": "{{webhookSecret}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Webhook-Token",
+                    "value": "{{webhookSecret}}"
+                  }
                 ],
-                "body": { "mode": "raw", "raw": "{\n  \"referenciaGateway\": \"fake-...\",\n  \"status\": \"rejected\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/webhooks/pagamento", "host": ["{{baseUrl}}"], "path": ["api", "webhooks", "pagamento"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"referenciaGateway\": \"fake-...\",\n  \"status\": \"rejected\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/webhooks/pagamento",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "pagamento"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
@@ -642,16 +1143,31 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"referenciaGateway\": \"{{referenciaGateway}}\",\n  \"status\": \"approved\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/pagamento",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "webhooks", "pagamento"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "pagamento"
+              ]
             },
             "description": "RF-16: sem o header `X-Webhook-Token` (ou com valor errado) a notificação é rejeitada com 401 e o caso de uso não é chamado."
           },
@@ -660,14 +1176,37 @@
               "name": "401 Unauthorized",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"referenciaGateway\": \"fake-...\",\n  \"status\": \"approved\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/webhooks/pagamento", "host": ["{{baseUrl}}"], "path": ["api", "webhooks", "pagamento"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"referenciaGateway\": \"fake-...\",\n  \"status\": \"approved\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/webhooks/pagamento",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "pagamento"
+                  ]
+                }
               },
               "status": "Unauthorized",
               "code": 401,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T17:32:16Z\",\n  \"status\": 401,\n  \"erro\": \"Unauthorized\",\n  \"mensagem\": \"Notificacao de pagamento nao autenticada.\",\n  \"caminho\": \"/api/webhooks/pagamento\"\n}"
             }
@@ -689,18 +1228,34 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Webhook-Token", "value": "{{webhookSecret}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Webhook-Token",
+                "value": "{{webhookSecret}}"
+              }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"referenciaGateway\": \"{{referenciaGateway}}\",\n  \"status\": \"pending\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/webhooks/pagamento",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "webhooks", "pagamento"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "webhooks",
+                "pagamento"
+              ]
             },
             "description": "Estados intermediários do gateway (`pending`, etc.) são reconhecidos como válidos, respondidos com 200 e ignorados — não alteram o pagamento."
           },
@@ -710,11 +1265,30 @@
               "originalRequest": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" },
-                  { "key": "X-Webhook-Token", "value": "{{webhookSecret}}" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Webhook-Token",
+                    "value": "{{webhookSecret}}"
+                  }
                 ],
-                "body": { "mode": "raw", "raw": "{\n  \"referenciaGateway\": \"fake-...\",\n  \"status\": \"pending\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/webhooks/pagamento", "host": ["{{baseUrl}}"], "path": ["api", "webhooks", "pagamento"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"referenciaGateway\": \"fake-...\",\n  \"status\": \"pending\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/webhooks/pagamento",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "webhooks",
+                    "pagamento"
+                  ]
+                }
               },
               "status": "OK",
               "code": 200,
@@ -746,16 +1320,30 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"loteId\": null,\n  \"nome\": \"\",\n  \"email\": \"nao-eh-email\",\n  \"telefone\": \"\",\n  \"metodoPagamento\": \"PIX\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/compras",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "compras"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "compras"
+              ]
             },
             "description": "RNF-15: Bean Validation no corpo → 422 com a lista de campos, sem stack trace."
           },
@@ -764,14 +1352,36 @@
               "name": "422 Unprocessable Entity",
               "originalRequest": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"loteId\": null,\n  \"nome\": \"\",\n  \"email\": \"nao-eh-email\",\n  \"telefone\": \"\",\n  \"metodoPagamento\": \"PIX\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/compras", "host": ["{{baseUrl}}"], "path": ["api", "compras"] }
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"loteId\": null,\n  \"nome\": \"\",\n  \"email\": \"nao-eh-email\",\n  \"telefone\": \"\",\n  \"metodoPagamento\": \"PIX\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/compras",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "compras"
+                  ]
+                }
               },
               "status": "Unprocessable Entity",
               "code": 422,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T17:32:16Z\",\n  \"status\": 422,\n  \"erro\": \"Unprocessable Entity\",\n  \"mensagem\": \"Um ou mais campos sao invalidos.\",\n  \"caminho\": \"/api/compras\",\n  \"camposInvalidos\": [\n    { \"campo\": \"loteId\", \"mensagem\": \"O lote e obrigatorio.\" },\n    { \"campo\": \"nome\", \"mensagem\": \"O nome e obrigatorio.\" },\n    { \"campo\": \"telefone\", \"mensagem\": \"O telefone e obrigatorio.\" },\n    { \"campo\": \"email\", \"mensagem\": \"E-mail invalido.\" }\n  ]\n}"
             }
@@ -795,8 +1405,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/eventos/99",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "eventos", "99"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "eventos",
+                "99"
+              ]
             },
             "description": "Exceção de domínio `RecursoNaoEncontradoException` → 404 no formato padrão."
           },
@@ -806,12 +1422,27 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/eventos/99", "host": ["{{baseUrl}}"], "path": ["api", "eventos", "99"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/eventos/99",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "eventos",
+                    "99"
+                  ]
+                }
               },
               "status": "Not Found",
               "code": 404,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T17:32:17Z\",\n  \"status\": 404,\n  \"erro\": \"Not Found\",\n  \"mensagem\": \"Evento nao encontrado(a): 99\",\n  \"caminho\": \"/api/eventos/99\"\n}"
             }
@@ -835,8 +1466,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/admin/eventos/1/inscritos",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "eventos", "1", "inscritos"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "1",
+                "inscritos"
+              ]
             },
             "description": "RF-26 / RNF-12: rota `/api/admin/**` sem o header `Authorization: Bearer` → 401."
           },
@@ -846,16 +1485,321 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/admin/eventos/1/inscritos", "host": ["{{baseUrl}}"], "path": ["api", "admin", "eventos", "1", "inscritos"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/eventos/1/inscritos",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "admin",
+                    "eventos",
+                    "1",
+                    "inscritos"
+                  ]
+                }
               },
               "status": "Unauthorized",
               "code": 401,
               "_postman_previewlanguage": "json",
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
               "cookie": [],
               "body": "{\n  \"timestamp\": \"2026-08-30T18:00:00Z\",\n  \"status\": 401,\n  \"erro\": \"Unauthorized\",\n  \"mensagem\": \"Autenticacao obrigatoria para esta rota.\",\n  \"caminho\": \"/api/admin/eventos/1/inscritos\"\n}"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "4 · Gestão de eventos",
+      "item": [
+        {
+          "name": "Admin · Editar evento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('nome e dataFim atualizados', function () {",
+                  "  var b = pm.response.json();",
+                  "  pm.expect(b.nome).to.equal('Congresso de Louvor 2026 (editado)');",
+                  "  pm.expect(b.dataFim).to.not.be.null;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Congresso de Louvor 2026 (editado)\",\n  \"descricao\": \"Conferencia anual - descricao revisada\",\n  \"dataHora\": \"2026-12-20T19:00:00\",\n  \"dataFim\": \"2026-12-22T22:00:00\",\n  \"imagemUrl\": \"https://res.cloudinary.com/demo/image/upload/congresso.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "PUT substitui os dados editaveis do evento (nao e PATCH parcial). Ver docs/gestaoDeEventos.md."
+          }
+        },
+        {
+          "name": "Admin · Editar lote (aumentar quantidade)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('lote com nova capacidade', function () {",
+                  "  var lote = pm.response.json().lotes.find(function (l) { return l.id === Number(pm.environment.get('loteId')); });",
+                  "  pm.expect(lote.preco).to.equal(70);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}/lotes/{{loteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}",
+                "lotes",
+                "{{loteId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 70.00,\n  \"quantidadeTotal\": 150\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "quantidadeTotal so pode aumentar; o acrescimo vira estoque DISPONIVEL."
+          }
+        },
+        {
+          "name": "Admin · Editar lote reduzindo quantidade (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}/lotes/{{loteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}",
+                "lotes",
+                "{{loteId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"1o Lote - Inteira\",\n  \"preco\": 70.00,\n  \"quantidadeTotal\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Reduzir a capacidade conflita com os ingressos ja gerados -> 409."
+          }
+        },
+        {
+          "name": "Admin · Cancelar evento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}/cancelamento",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}",
+                "cancelamento"
+              ]
+            },
+            "description": "Idempotente. Evento cancelado some da vitrine e nao aceita compra nova."
+          }
+        },
+        {
+          "name": "Cliente · Comprar de evento cancelado (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', function () { pm.response.to.have.status(409); });",
+                  "pm.test('mensagem de evento encerrado', function () {",
+                  "  pm.expect(pm.response.json().mensagem).to.include('evento');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/compras",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "compras"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"loteId\": {{loteId}},\n  \"nome\": \"Tarde\",\n  \"email\": \"tarde@exemplo.com\",\n  \"telefone\": \"11900000000\",\n  \"metodoPagamento\": \"PIX\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Depois do cancelamento a compra e recusada com 409."
+          }
+        },
+        {
+          "name": "Admin · Excluir lote (409 - tem venda)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('bloqueado por venda/reserva (409) OU ja limpo (204)', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/eventos/{{eventoId}}/lotes/{{loteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "eventos",
+                "{{eventoId}}",
+                "lotes",
+                "{{loteId}}"
+              ]
+            },
+            "description": "DELETE de lote so passa se nenhum ingresso do lote esta RESERVADO/VENDIDO. Como o fluxo feliz vendeu 1, espera-se 409 aqui."
+          }
         }
       ]
     }

@@ -38,4 +38,9 @@ class EventoRepositoryJpa implements EventoRepositoryPort {
     public List<Evento> listarTodos() {
         return repository.findAll().stream().map(EventoJpa::paraDominio).toList();
     }
+
+    @Override
+    public void excluir(Long id) {
+        repository.deleteById(id);
+    }
 }

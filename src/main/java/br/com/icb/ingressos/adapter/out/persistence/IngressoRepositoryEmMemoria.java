@@ -1,5 +1,6 @@
 package br.com.icb.ingressos.adapter.out.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,6 +45,23 @@ class IngressoRepositoryEmMemoria extends RepositorioEmMemoria<Ingresso> impleme
     public List<Ingresso> listarVendidosDoEvento(Long eventoId) {
         return filtrar(ingresso -> ingresso.getEventoId().equals(eventoId)
                 && ingresso.getStatus() == StatusIngresso.VENDIDO);
+    }
+
+    @Override
+    public long contarPorEventoNosStatus(Long eventoId, Collection<StatusIngresso> status) {
+        return contar(ingresso -> ingresso.getEventoId().equals(eventoId)
+                && status.contains(ingresso.getStatus()));
+    }
+
+    @Override
+    public long contarPorLoteNosStatus(Long loteId, Collection<StatusIngresso> status) {
+        return contar(ingresso -> ingresso.getLoteId().equals(loteId)
+                && status.contains(ingresso.getStatus()));
+    }
+
+    @Override
+    public void excluirPorLote(Long loteId) {
+        removerSe(ingresso -> ingresso.getLoteId().equals(loteId));
     }
 
     @Override

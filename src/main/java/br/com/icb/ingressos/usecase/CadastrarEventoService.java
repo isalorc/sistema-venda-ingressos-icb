@@ -23,8 +23,9 @@ public class CadastrarEventoService implements CadastrarEventoUseCase {
     @Override
     @Transactional
     public Long cadastrar(CadastrarEventoCommand comando) {
-        var evento = eventoRepository.salvar(
-                Evento.novo(comando.nome(), comando.descricao(), comando.dataHora()));
+        var evento = eventoRepository.salvar(Evento.novo(
+                comando.nome(), comando.descricao(), comando.dataHora(),
+                comando.dataFim(), comando.imagemUrl()));
         return evento.getId();
     }
 }

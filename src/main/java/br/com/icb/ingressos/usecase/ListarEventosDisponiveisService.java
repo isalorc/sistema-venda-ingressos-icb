@@ -1,6 +1,5 @@
 package br.com.icb.ingressos.usecase;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -9,8 +8,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.icb.ingressos.domain.ClassificacaoDeLotes;
 import br.com.icb.ingressos.domain.Evento;
-import br.com.icb.ingressos.domain.Lote;
+import br.com.icb.ingressos.domain.enums.StatusVendas;
 import br.com.icb.ingressos.ports.in.ListarEventosDisponiveisUseCase;
 import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.LoteRepositoryPort;
@@ -18,9 +18,10 @@ import br.com.icb.ingressos.ports.out.LoteRepositoryPort;
 /**
  * Lista os eventos disponíveis para compra (RF-01).
  *
- * <p>Um evento entra na lista quando ainda não ocorreu (RF-03) e tem pelo menos
- * um lote com ingressos disponíveis. O menor preço e o total de ingressos
- * disponíveis consideram apenas os lotes com estoque.
+ * <p>Um evento entra na lista quando ainda não ocorreu (RF-03) e suas vendas não
+ * estão encerradas (há um lote à venda ou agendado). O preço e a disponibilidade
+ * refletem o lote ativo — ou, quando nenhum está ativo, o próximo a abrir. Regra
+ * completa em {@code docs/viradaDeLote.md}.
  */
 @Service
 public class ListarEventosDisponiveisService implements ListarEventosDisponiveisUseCase {
@@ -42,35 +43,34 @@ public class ListarEventosDisponiveisService implements ListarEventosDisponiveis
     public List<EventoDisponivel> listar() {
         var agora = LocalDateTime.now(clock);
         return eventoRepository.listarTodos().stream()
+                .filter(evento -> !evento.cancelado())
                 .filter(evento -> !evento.jaOcorreu(agora))
-                .map(this::resumirSeDisponivel)
+                .map(evento -> resumirSeVendendo(evento, agora))
                 .flatMap(Optional::stream)
                 .toList();
     }
 
-    private Optional<EventoDisponivel> resumirSeDisponivel(Evento evento) {
-        var lotesComEstoque = loteRepository.listarPorEvento(evento.getId()).stream()
-                .filter(lote -> lote.getQuantidadeDisponivel() > 0)
-                .toList();
+    private Optional<EventoDisponivel> resumirSeVendendo(Evento evento, LocalDateTime agora) {
+        var classificacao = ClassificacaoDeLotes.de(
+                loteRepository.listarPorEvento(evento.getId()), agora);
 
-        if (lotesComEstoque.isEmpty()) {
+        if (classificacao.statusVendas() == StatusVendas.ENCERRADA) {
             return Optional.empty();
         }
 
-        var menorPreco = lotesComEstoque.stream()
-                .map(Lote::getPreco)
-                .min(BigDecimal::compareTo)
-                .orElseThrow();
-        var ingressosDisponiveis = lotesComEstoque.stream()
-                .mapToInt(Lote::getQuantidadeDisponivel)
-                .sum();
+        // Não-ENCERRADA garante um lote ativo ou um próximo a abrir.
+        var representante = classificacao.ativoOuProximo().orElseThrow();
 
         return Optional.of(new EventoDisponivel(
                 evento.getId(),
                 evento.getNome(),
                 evento.getDescricao(),
                 evento.getDataHora(),
-                menorPreco,
-                ingressosDisponiveis));
+                evento.getDataFim(),
+                evento.getImagemUrl(),
+                representante.getPreco(),
+                representante.getQuantidadeDisponivel(),
+                classificacao.statusVendas(),
+                classificacao.proximaAbertura().orElse(null)));
     }
 }

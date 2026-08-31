@@ -19,9 +19,13 @@ public record CadastrarEventoRequest(
 
         @NotNull(message = "A data e hora do evento são obrigatórias.")
         @Future(message = "A data e hora do evento devem estar no futuro.")
-        LocalDateTime dataHora) {
+        LocalDateTime dataHora,
+
+        LocalDateTime dataFim,
+
+        String imagemUrl) {
 
     public CadastrarEventoCommand toCommand() {
-        return new CadastrarEventoCommand(nome, descricao, dataHora);
+        return new CadastrarEventoCommand(nome, descricao, dataHora, dataFim, imagemUrl);
     }
 }

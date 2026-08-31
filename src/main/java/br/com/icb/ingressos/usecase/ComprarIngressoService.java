@@ -3,17 +3,23 @@ package br.com.icb.ingressos.usecase;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.icb.ingressos.domain.ClassificacaoDeLotes;
 import br.com.icb.ingressos.domain.Lote;
 import br.com.icb.ingressos.domain.Pagamento;
 import br.com.icb.ingressos.domain.Pedido;
 import br.com.icb.ingressos.domain.Usuario;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
+import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
+import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase;
+import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort.DadosCobranca;
 import br.com.icb.ingressos.ports.out.IngressoRepositoryPort;
@@ -35,6 +41,7 @@ import br.com.icb.ingressos.ports.out.UsuarioRepositoryPort;
 public class ComprarIngressoService implements ComprarIngressoUseCase {
 
     private final UsuarioRepositoryPort usuarioRepository;
+    private final EventoRepositoryPort eventoRepository;
     private final LoteRepositoryPort loteRepository;
     private final IngressoRepositoryPort ingressoRepository;
     private final PedidoRepositoryPort pedidoRepository;
@@ -43,6 +50,7 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
     private final Clock clock;
 
     public ComprarIngressoService(UsuarioRepositoryPort usuarioRepository,
+                                  EventoRepositoryPort eventoRepository,
                                   LoteRepositoryPort loteRepository,
                                   IngressoRepositoryPort ingressoRepository,
                                   PedidoRepositoryPort pedidoRepository,
@@ -50,6 +58,7 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
                                   GatewayPagamentoPort gatewayPagamento,
                                   Clock clock) {
         this.usuarioRepository = usuarioRepository;
+        this.eventoRepository = eventoRepository;
         this.loteRepository = loteRepository;
         this.ingressoRepository = ingressoRepository;
         this.pedidoRepository = pedidoRepository;
@@ -65,6 +74,9 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
 
         var lote = loteRepository.buscarPorIdComBloqueio(comando.loteId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Lote", comando.loteId()));
+
+        garantirEventoAtivo(lote.getEventoId());
+        garantirQueEhOLoteAtivo(lote);
 
         var ingresso = ingressoRepository.buscarPrimeiroDisponivelDoLote(lote.getId())
                 .orElseThrow(() -> new IngressoEsgotadoException(lote.getId()));
@@ -87,6 +99,36 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
                 pedido.getStatus(),
                 cobranca.urlPagamento(),
                 cobranca.qrCodePix());
+    }
+
+    /**
+     * Virada de lote (RNF / {@code docs/viradaDeLote.md}): só o lote ativo do
+     * evento vende. Recusa compras de lote agendado, encerrado ou ainda na fila.
+     * O lote travado entra na classificação com o estoque recém-lido.
+     */
+    private void garantirEventoAtivo(Long eventoId) {
+        var evento = eventoRepository.buscarPorId(eventoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Evento", eventoId));
+        if (evento.cancelado()) {
+            throw new TransicaoInvalidaException("As vendas deste evento foram encerradas.");
+        }
+    }
+
+    private void garantirQueEhOLoteAtivo(Lote loteTravado) {
+        var outrosLotes = loteRepository.listarPorEvento(loteTravado.getEventoId()).stream()
+                .filter(lote -> !Objects.equals(lote.getId(), loteTravado.getId()));
+        var lotesDoEvento = Stream.concat(Stream.of(loteTravado), outrosLotes).toList();
+
+        var classificacao = ClassificacaoDeLotes.de(lotesDoEvento, agora());
+        if (classificacao.ativoEh(loteTravado.getId())) {
+            return;
+        }
+        throw switch (classificacao.statusDe(loteTravado.getId())) {
+            case ESGOTADO -> new IngressoEsgotadoException(loteTravado.getId());
+            case ENCERRADO -> new LoteIndisponivelException("As vendas deste lote foram encerradas.");
+            case AGENDADO -> new LoteIndisponivelException("As vendas deste lote ainda não começaram.");
+            default -> new LoteIndisponivelException("Este lote ainda não está disponível.");
+        };
     }
 
     /** RN-4: sem cadastro — reaproveita o cliente pelo e-mail ou cria um novo. */
