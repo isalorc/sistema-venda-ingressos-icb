@@ -39,6 +39,11 @@ class LoteRepositoryEmMemoria extends RepositorioEmMemoria<Lote> implements Lote
     }
 
     @Override
+    public void excluir(Long id) {
+        remover(id);
+    }
+
+    @Override
     protected Long id(Lote lote) {
         return lote.getId();
     }

@@ -37,7 +37,7 @@ class EventoControllerTest {
     @Test
     void listaEventosDisponiveis() throws Exception {
         when(listarEventosDisponiveis.listar()).thenReturn(List.of(new EventoDisponivel(
-                1L, "Congresso", "descrição", LocalDateTime.of(2026, 12, 1, 20, 0),
+                1L, "Congresso", "descrição", LocalDateTime.of(2026, 12, 1, 20, 0), null, null,
                 new BigDecimal("50.00"), 8, StatusVendas.A_VENDA, null)));
 
         mockMvc.perform(get("/api/eventos"))
@@ -51,7 +51,7 @@ class EventoControllerTest {
     @Test
     void detalhaEvento() throws Exception {
         when(consultarEvento.consultar(1L)).thenReturn(new DetalheEvento(
-                1L, "Congresso", "descrição", LocalDateTime.of(2026, 12, 1, 20, 0),
+                1L, "Congresso", "descrição", LocalDateTime.of(2026, 12, 1, 20, 0), null, null, false,
                 List.of(new DetalheEvento.LoteDisponivel(10L, "Inteira", new BigDecimal("50.00"), 40,
                         StatusLote.A_VENDA, null, null))));
 

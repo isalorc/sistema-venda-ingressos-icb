@@ -26,6 +26,9 @@ public interface ConsultarEventoUseCase {
             String nome,
             String descricao,
             LocalDateTime dataHora,
+            LocalDateTime dataFim,
+            String imagemUrl,
+            boolean cancelado,
             List<LoteDisponivel> lotes) {
 
         public record LoteDisponivel(

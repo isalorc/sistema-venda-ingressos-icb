@@ -60,6 +60,9 @@ public class ConsultarEventoService implements ConsultarEventoUseCase {
                 evento.getNome(),
                 evento.getDescricao(),
                 evento.getDataHora(),
+                evento.getDataFim(),
+                evento.getImagemUrl(),
+                evento.cancelado(),
                 lotes);
     }
 }

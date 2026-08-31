@@ -16,6 +16,9 @@ public record EventoDetalheResponse(
         String nome,
         String descricao,
         LocalDateTime dataHora,
+        LocalDateTime dataFim,
+        String imagemUrl,
+        boolean cancelado,
         List<LoteResponse> lotes) {
 
     public record LoteResponse(
@@ -35,6 +38,7 @@ public record EventoDetalheResponse(
                         lote.status(), lote.inicioVendas(), lote.fimVendas()))
                 .toList();
         return new EventoDetalheResponse(
-                evento.eventoId(), evento.nome(), evento.descricao(), evento.dataHora(), lotes);
+                evento.eventoId(), evento.nome(), evento.descricao(), evento.dataHora(),
+                evento.dataFim(), evento.imagemUrl(), evento.cancelado(), lotes);
     }
 }

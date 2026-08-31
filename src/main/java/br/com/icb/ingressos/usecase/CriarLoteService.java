@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.icb.ingressos.domain.Ingresso;
 import br.com.icb.ingressos.domain.Lote;
-import br.com.icb.ingressos.domain.exception.PeriodoDeVendaInvalidoException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.ports.in.CriarLoteUseCase;
 import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
@@ -48,7 +47,8 @@ public class CriarLoteService implements CriarLoteUseCase {
         var evento = eventoRepository.buscarPorId(comando.eventoId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Evento", comando.eventoId()));
 
-        validarJanelaDeVendas(comando, evento.getDataHora());
+        ValidadorDeJanelaDeVendas.validarNoLote(comando.inicioVendas(), comando.fimVendas(),
+                evento.termino(), LocalDateTime.now(clock));
 
         var lote = loteRepository.salvar(Lote.novo(
                 evento.getId(), comando.nome(), comando.preco(), comando.quantidadeTotal(),
@@ -60,28 +60,5 @@ public class CriarLoteService implements CriarLoteUseCase {
         ingressoRepository.salvarTodos(ingressos);
 
         return lote.getId();
-    }
-
-    private void validarJanelaDeVendas(CriarLoteCommand comando, LocalDateTime dataEvento) {
-        var inicio = comando.inicioVendas();
-        var fim = comando.fimVendas();
-        var agora = LocalDateTime.now(clock);
-
-        if (inicio != null && fim != null && fim.isBefore(inicio)) {
-            throw new PeriodoDeVendaInvalidoException(
-                    "O fim das vendas não pode ser anterior ao início.");
-        }
-        if (fim != null && fim.isBefore(agora)) {
-            throw new PeriodoDeVendaInvalidoException(
-                    "O fim das vendas não pode estar no passado.");
-        }
-        if (inicio != null && inicio.isAfter(dataEvento)) {
-            throw new PeriodoDeVendaInvalidoException(
-                    "O início das vendas não pode ser depois da data do evento.");
-        }
-        if (fim != null && fim.isAfter(dataEvento)) {
-            throw new PeriodoDeVendaInvalidoException(
-                    "O fim das vendas não pode ser depois da data do evento.");
-        }
     }
 }

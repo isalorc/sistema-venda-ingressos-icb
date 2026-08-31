@@ -67,6 +67,22 @@ public class Lote {
                 quantidadeTotal, quantidadeDisponivel, inicioVendas, fimVendas);
     }
 
+    /**
+     * Devolve uma nova instância com os dados editados, preservando id. A
+     * {@code quantidadeTotal} só pode aumentar — o acréscimo entra como estoque
+     * disponível; reduzir conflita com os ingressos já gerados.
+     */
+    public Lote editado(String nome, BigDecimal preco, int novaQuantidadeTotal,
+                        LocalDateTime inicioVendas, LocalDateTime fimVendas) {
+        if (novaQuantidadeTotal < quantidadeTotal) {
+            throw new TransicaoInvalidaException(
+                    "Não é possível reduzir a capacidade do lote " + id + ".");
+        }
+        var acrescimo = novaQuantidadeTotal - quantidadeTotal;
+        return new Lote(id, eventoId, nome, preco, novaQuantidadeTotal,
+                quantidadeDisponivel + acrescimo, inicioVendas, fimVendas);
+    }
+
     public void reservarUnidade() {
         if (quantidadeDisponivel == 0) {
             throw new IngressoEsgotadoException(id);

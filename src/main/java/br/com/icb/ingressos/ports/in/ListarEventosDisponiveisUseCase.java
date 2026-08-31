@@ -31,6 +31,8 @@ public interface ListarEventosDisponiveisUseCase {
             String nome,
             String descricao,
             LocalDateTime dataHora,
+            LocalDateTime dataFim,
+            String imagemUrl,
             BigDecimal menorPreco,
             int ingressosDisponiveis,
             StatusVendas statusVendas,

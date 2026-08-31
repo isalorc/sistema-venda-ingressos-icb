@@ -17,7 +17,9 @@ import br.com.icb.ingressos.domain.Usuario;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
 import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
+import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase;
+import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort.DadosCobranca;
 import br.com.icb.ingressos.ports.out.IngressoRepositoryPort;
@@ -39,6 +41,7 @@ import br.com.icb.ingressos.ports.out.UsuarioRepositoryPort;
 public class ComprarIngressoService implements ComprarIngressoUseCase {
 
     private final UsuarioRepositoryPort usuarioRepository;
+    private final EventoRepositoryPort eventoRepository;
     private final LoteRepositoryPort loteRepository;
     private final IngressoRepositoryPort ingressoRepository;
     private final PedidoRepositoryPort pedidoRepository;
@@ -47,6 +50,7 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
     private final Clock clock;
 
     public ComprarIngressoService(UsuarioRepositoryPort usuarioRepository,
+                                  EventoRepositoryPort eventoRepository,
                                   LoteRepositoryPort loteRepository,
                                   IngressoRepositoryPort ingressoRepository,
                                   PedidoRepositoryPort pedidoRepository,
@@ -54,6 +58,7 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
                                   GatewayPagamentoPort gatewayPagamento,
                                   Clock clock) {
         this.usuarioRepository = usuarioRepository;
+        this.eventoRepository = eventoRepository;
         this.loteRepository = loteRepository;
         this.ingressoRepository = ingressoRepository;
         this.pedidoRepository = pedidoRepository;
@@ -70,6 +75,7 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
         var lote = loteRepository.buscarPorIdComBloqueio(comando.loteId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Lote", comando.loteId()));
 
+        garantirEventoAtivo(lote.getEventoId());
         garantirQueEhOLoteAtivo(lote);
 
         var ingresso = ingressoRepository.buscarPrimeiroDisponivelDoLote(lote.getId())
@@ -100,6 +106,14 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
      * evento vende. Recusa compras de lote agendado, encerrado ou ainda na fila.
      * O lote travado entra na classificação com o estoque recém-lido.
      */
+    private void garantirEventoAtivo(Long eventoId) {
+        var evento = eventoRepository.buscarPorId(eventoId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Evento", eventoId));
+        if (evento.cancelado()) {
+            throw new TransicaoInvalidaException("As vendas deste evento foram encerradas.");
+        }
+    }
+
     private void garantirQueEhOLoteAtivo(Lote loteTravado) {
         var outrosLotes = loteRepository.listarPorEvento(loteTravado.getEventoId()).stream()
                 .filter(lote -> !Objects.equals(lote.getId(), loteTravado.getId()));

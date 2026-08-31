@@ -43,6 +43,7 @@ public class ListarEventosDisponiveisService implements ListarEventosDisponiveis
     public List<EventoDisponivel> listar() {
         var agora = LocalDateTime.now(clock);
         return eventoRepository.listarTodos().stream()
+                .filter(evento -> !evento.cancelado())
                 .filter(evento -> !evento.jaOcorreu(agora))
                 .map(evento -> resumirSeVendendo(evento, agora))
                 .flatMap(Optional::stream)
@@ -65,6 +66,8 @@ public class ListarEventosDisponiveisService implements ListarEventosDisponiveis
                 evento.getNome(),
                 evento.getDescricao(),
                 evento.getDataHora(),
+                evento.getDataFim(),
+                evento.getImagemUrl(),
                 representante.getPreco(),
                 representante.getQuantidadeDisponivel(),
                 classificacao.statusVendas(),

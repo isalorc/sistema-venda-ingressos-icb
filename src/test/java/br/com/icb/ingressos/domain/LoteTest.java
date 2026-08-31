@@ -112,6 +112,30 @@ class LoteTest {
     }
 
     @Nested
+    class Edicao {
+
+        @Test
+        void editadoAumentandoCapacidadeSomaAoEstoqueDisponivel() {
+            var lote = Lote.reconstituir(5L, 1L, "Inteira", new BigDecimal("50.00"), 100, 40);
+
+            var novo = lote.editado("Inteira", new BigDecimal("60.00"), 150, null, null);
+
+            assertThat(novo.getId()).isEqualTo(5L);
+            assertThat(novo.getQuantidadeTotal()).isEqualTo(150);
+            assertThat(novo.getQuantidadeDisponivel()).isEqualTo(90); // 40 + 50
+            assertThat(novo.getPreco()).isEqualByComparingTo("60.00");
+        }
+
+        @Test
+        void editadoRecusaReduzirACapacidade() {
+            var lote = Lote.reconstituir(5L, 1L, "Inteira", new BigDecimal("50.00"), 100, 40);
+
+            assertThatExceptionOfType(TransicaoInvalidaException.class).isThrownBy(
+                    () -> lote.editado("Inteira", new BigDecimal("50.00"), 80, null, null));
+        }
+    }
+
+    @Nested
     class Estoque {
 
         @Test

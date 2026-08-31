@@ -28,4 +28,7 @@ public interface LoteRepositoryPort {
     Optional<Lote> buscarPorIdComBloqueio(Long id);
 
     List<Lote> listarPorEvento(Long eventoId);
+
+    /** Remove o lote. Os ingressos do lote são removidos antes, no caso de uso. */
+    void excluir(Long id);
 }
