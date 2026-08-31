@@ -13,18 +13,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.icb.ingressos.adapter.in.web.dto.CadastrarEventoRequest;
 import br.com.icb.ingressos.adapter.in.web.dto.CriarLoteRequest;
+import br.com.icb.ingressos.adapter.in.web.dto.EventoAdminResponse;
 import br.com.icb.ingressos.adapter.in.web.dto.InscritoResponse;
 import br.com.icb.ingressos.adapter.in.web.dto.RecursoCriadoResponse;
 import br.com.icb.ingressos.ports.in.CadastrarEventoUseCase;
 import br.com.icb.ingressos.ports.in.ConsultarInscritosUseCase;
 import br.com.icb.ingressos.ports.in.CriarLoteUseCase;
+import br.com.icb.ingressos.ports.in.ListarEventosAdminUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 /**
  * Endpoints administrativos de gestão de eventos, lotes e inscritos
- * (RF-20, RF-22, RF-23, RF-25).
+ * (RF-20, RF-21, RF-22, RF-23, RF-25).
  *
  * <p>Todas as rotas exigem administrador autenticado (RF-26): envie o token do
  * {@code POST /api/admin/login} no header {@code Authorization: Bearer <token>}.
@@ -37,13 +39,24 @@ public class AdminEventoController {
     private final CadastrarEventoUseCase cadastrarEvento;
     private final CriarLoteUseCase criarLote;
     private final ConsultarInscritosUseCase consultarInscritos;
+    private final ListarEventosAdminUseCase listarEventosAdmin;
 
     public AdminEventoController(CadastrarEventoUseCase cadastrarEvento,
                                 CriarLoteUseCase criarLote,
-                                ConsultarInscritosUseCase consultarInscritos) {
+                                ConsultarInscritosUseCase consultarInscritos,
+                                ListarEventosAdminUseCase listarEventosAdmin) {
         this.cadastrarEvento = cadastrarEvento;
         this.criarLote = criarLote;
         this.consultarInscritos = consultarInscritos;
+        this.listarEventosAdmin = listarEventosAdmin;
+    }
+
+    @GetMapping
+    @Operation(summary = "Lista todos os eventos (inclusive sem lote e já ocorridos)")
+    public List<EventoAdminResponse> listarEventos() {
+        return listarEventosAdmin.listar().stream()
+                .map(EventoAdminResponse::de)
+                .toList();
     }
 
     @PostMapping

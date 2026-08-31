@@ -24,6 +24,8 @@ import br.com.icb.ingressos.ports.in.CadastrarEventoUseCase;
 import br.com.icb.ingressos.ports.in.ConsultarInscritosUseCase;
 import br.com.icb.ingressos.ports.in.ConsultarInscritosUseCase.Inscrito;
 import br.com.icb.ingressos.ports.in.CriarLoteUseCase;
+import br.com.icb.ingressos.ports.in.ListarEventosAdminUseCase;
+import br.com.icb.ingressos.ports.in.ListarEventosAdminUseCase.EventoAdmin;
 
 @WebMvcTest(AdminEventoController.class)
 @AutoConfigureMockMvc(addFilters = false) // autorização coberta em SegurancaAdminTest
@@ -34,6 +36,23 @@ class AdminEventoControllerTest {
     @MockBean private CadastrarEventoUseCase cadastrarEvento;
     @MockBean private CriarLoteUseCase criarLote;
     @MockBean private ConsultarInscritosUseCase consultarInscritos;
+    @MockBean private ListarEventosAdminUseCase listarEventosAdmin;
+
+    @Test
+    void listarEventosRetornaTodosComOResumoDosLotes() throws Exception {
+        when(listarEventosAdmin.listar()).thenReturn(List.of(
+                new EventoAdmin(2L, "Vigília", null, LocalDateTime.of(2026, 11, 1, 20, 0),
+                        false, 0, 0, 0),
+                new EventoAdmin(1L, "Congresso", "anual", LocalDateTime.of(2026, 10, 1, 19, 0),
+                        false, 2, 150, 130)));
+
+        mockMvc.perform(get("/api/admin/eventos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(2))
+                .andExpect(jsonPath("$[0].quantidadeLotes").value(0))
+                .andExpect(jsonPath("$[1].nome").value("Congresso"))
+                .andExpect(jsonPath("$[1].ingressosDisponiveis").value(130));
+    }
 
     @Test
     void cadastrarEventoRetorna201ComIdELocation() throws Exception {
