@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ import br.com.icb.ingressos.domain.enums.StatusIngresso;
 import br.com.icb.ingressos.domain.enums.StatusPagamento;
 import br.com.icb.ingressos.domain.enums.StatusPedido;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
+import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase.ComprarIngressoCommand;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort;
@@ -170,5 +172,43 @@ class ComprarIngressoServiceTest {
 
         verify(pedidoRepository, never()).salvar(any());
         verify(gatewayPagamento, never()).criarCobranca(any());
+    }
+
+    @Test
+    void loteAgendadoRecusaACompraSemCriarPedido() {
+        var agendado = Lote.reconstituir(LOTE_ID, EVENTO_ID, "2º Lote", PRECO, 100, 100,
+                AGORA.plusDays(10), null);
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(agendado));
+        when(loteRepository.listarPorEvento(EVENTO_ID)).thenReturn(List.of(agendado));
+
+        assertThatExceptionOfType(LoteIndisponivelException.class)
+                .isThrownBy(() -> service.comprar(comando()))
+                .withMessageContaining("ainda não começaram");
+
+        verify(pedidoRepository, never()).salvar(any());
+    }
+
+    @Test
+    void loteEncerradoRecusaACompra() {
+        var encerrado = Lote.reconstituir(LOTE_ID, EVENTO_ID, "1º Lote", PRECO, 100, 40,
+                null, AGORA.minusDays(1));
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(encerrado));
+        when(loteRepository.listarPorEvento(EVENTO_ID)).thenReturn(List.of(encerrado));
+
+        assertThatExceptionOfType(LoteIndisponivelException.class)
+                .isThrownBy(() -> service.comprar(comando()))
+                .withMessageContaining("encerradas");
+    }
+
+    @Test
+    void loteNaFilaRecusaACompraEnquantoOAnteriorEstaAtivo() {
+        var loteAnterior = Lote.reconstituir(1L, EVENTO_ID, "1º Lote", PRECO, 100, 10);
+        var loteNaFila = loteComEstoque(100);
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(loteNaFila));
+        when(loteRepository.listarPorEvento(EVENTO_ID)).thenReturn(List.of(loteAnterior, loteNaFila));
+
+        assertThatExceptionOfType(LoteIndisponivelException.class)
+                .isThrownBy(() -> service.comprar(comando()))
+                .withMessageContaining("ainda não está disponível");
     }
 }

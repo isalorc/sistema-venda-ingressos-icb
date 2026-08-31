@@ -46,6 +46,7 @@ class LoteRepositoryEmMemoria extends RepositorioEmMemoria<Lote> implements Lote
     @Override
     protected Lote comId(Lote lote, long id) {
         return Lote.reconstituir(id, lote.getEventoId(), lote.getNome(), lote.getPreco(),
-                lote.getQuantidadeTotal(), lote.getQuantidadeDisponivel());
+                lote.getQuantidadeTotal(), lote.getQuantidadeDisponivel(),
+                lote.getInicioVendas(), lote.getFimVendas());
     }
 }

@@ -2,12 +2,14 @@ package br.com.icb.ingressos.adapter.in.web.dto;
 
 import java.time.LocalDateTime;
 
+import br.com.icb.ingressos.domain.enums.StatusVendas;
 import br.com.icb.ingressos.ports.in.ListarEventosAdminUseCase.EventoAdmin;
 
 /**
  * Item da listagem administrativa de eventos (RF-21). Traz o resumo dos lotes
  * para o painel distinguir um evento sem ingressos ({@code quantidadeLotes: 0})
- * de um já configurado.
+ * de um já configurado, e o {@code statusVendas} para saber se o evento está
+ * vendendo, agendado ou encerrado.
  */
 public record EventoAdminResponse(
         Long id,
@@ -17,7 +19,8 @@ public record EventoAdminResponse(
         boolean jaOcorreu,
         int quantidadeLotes,
         int ingressosTotais,
-        int ingressosDisponiveis) {
+        int ingressosDisponiveis,
+        StatusVendas statusVendas) {
 
     public static EventoAdminResponse de(EventoAdmin evento) {
         return new EventoAdminResponse(
@@ -28,6 +31,7 @@ public record EventoAdminResponse(
                 evento.jaOcorreu(),
                 evento.quantidadeLotes(),
                 evento.ingressosTotais(),
-                evento.ingressosDisponiveis());
+                evento.ingressosDisponiveis(),
+                evento.statusVendas());
     }
 }

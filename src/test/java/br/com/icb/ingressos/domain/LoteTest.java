@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,53 @@ class LoteTest {
         void rejeitaDisponivelMaiorQueTotalNaReconstituicao() {
             assertThatIllegalArgumentException()
                     .isThrownBy(() -> Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 11));
+        }
+
+        @Test
+        void rejeitaFimDeVendasAntesDoInicio() {
+            var inicio = LocalDateTime.of(2026, 10, 10, 0, 0);
+            assertThatIllegalArgumentException().isThrownBy(() -> Lote.novo(
+                    1L, "Inteira", new BigDecimal("50.00"), 10, inicio, inicio.minusDays(1)));
+        }
+    }
+
+    @Nested
+    class JanelaDeVendas {
+
+        private static final LocalDateTime AGORA = LocalDateTime.of(2026, 8, 30, 12, 0);
+
+        @Test
+        void loteSemJanelaEstaSempreDentroDaJanela() {
+            var lote = loteCom(10);
+
+            assertThat(lote.dentroDaJanelaDeVendas(AGORA)).isTrue();
+            assertThat(lote.disponivelParaVenda(AGORA)).isTrue();
+        }
+
+        @Test
+        void loteComInicioNoFuturoAindaNaoIniciou() {
+            var lote = Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 10,
+                    AGORA.plusDays(5), null);
+
+            assertThat(lote.vendasIniciadas(AGORA)).isFalse();
+            assertThat(lote.disponivelParaVenda(AGORA)).isFalse();
+        }
+
+        @Test
+        void loteComFimNoPassadoJaEncerrou() {
+            var lote = Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 10,
+                    null, AGORA.minusDays(1));
+
+            assertThat(lote.vendasNaoEncerradas(AGORA)).isFalse();
+            assertThat(lote.disponivelParaVenda(AGORA)).isFalse();
+        }
+
+        @Test
+        void loteEsgotadoNaoEstaDisponivelMesmoDentroDaJanela() {
+            var lote = Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 0);
+
+            assertThat(lote.dentroDaJanelaDeVendas(AGORA)).isTrue();
+            assertThat(lote.disponivelParaVenda(AGORA)).isFalse();
         }
     }
 

@@ -19,6 +19,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import br.com.icb.ingressos.domain.enums.StatusVendas;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.ports.in.CadastrarEventoUseCase;
 import br.com.icb.ingressos.ports.in.ConsultarInscritosUseCase;
@@ -42,14 +43,15 @@ class AdminEventoControllerTest {
     void listarEventosRetornaTodosComOResumoDosLotes() throws Exception {
         when(listarEventosAdmin.listar()).thenReturn(List.of(
                 new EventoAdmin(2L, "Vigília", null, LocalDateTime.of(2026, 11, 1, 20, 0),
-                        false, 0, 0, 0),
+                        false, 0, 0, 0, StatusVendas.ENCERRADA),
                 new EventoAdmin(1L, "Congresso", "anual", LocalDateTime.of(2026, 10, 1, 19, 0),
-                        false, 2, 150, 130)));
+                        false, 2, 150, 130, StatusVendas.A_VENDA)));
 
         mockMvc.perform(get("/api/admin/eventos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(2))
                 .andExpect(jsonPath("$[0].quantidadeLotes").value(0))
+                .andExpect(jsonPath("$[0].statusVendas").value("ENCERRADA"))
                 .andExpect(jsonPath("$[1].nome").value("Congresso"))
                 .andExpect(jsonPath("$[1].ingressosDisponiveis").value(130));
     }

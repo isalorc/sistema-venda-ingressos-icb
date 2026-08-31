@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import br.com.icb.ingressos.domain.ClassificacaoDeLotes;
 import br.com.icb.ingressos.domain.Evento;
 import br.com.icb.ingressos.domain.Lote;
 import br.com.icb.ingressos.ports.in.ListarEventosAdminUseCase;
@@ -54,6 +55,7 @@ public class ListarEventosAdminService implements ListarEventosAdminUseCase {
                 evento.jaOcorreu(agora),
                 lotes.size(),
                 lotes.stream().mapToInt(Lote::getQuantidadeTotal).sum(),
-                lotes.stream().mapToInt(Lote::getQuantidadeDisponivel).sum());
+                lotes.stream().mapToInt(Lote::getQuantidadeDisponivel).sum(),
+                ClassificacaoDeLotes.de(lotes, agora).statusVendas());
     }
 }

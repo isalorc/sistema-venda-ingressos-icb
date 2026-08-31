@@ -2,6 +2,7 @@ package br.com.icb.ingressos.adapter.in.web;
 
 import br.com.icb.ingressos.domain.exception.DominioException;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
+import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import br.com.icb.ingressos.usecase.CredenciaisInvalidasException;
@@ -104,6 +105,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(TransicaoInvalidaException.class)
     public ResponseEntity<ErroResponse> tratarTransicaoInvalida(TransicaoInvalidaException excecao,
                                                                 WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErroResponse.de(
+                HttpStatus.CONFLICT, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    /** Compra de lote que não é o ativo do evento (agendado/encerrado/na fila — RN virada de lote) → 409. */
+    @ExceptionHandler(LoteIndisponivelException.class)
+    public ResponseEntity<ErroResponse> tratarLoteIndisponivel(LoteIndisponivelException excecao,
+                                                               WebRequest requisicao) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ErroResponse.de(
                 HttpStatus.CONFLICT, excecao.getMessage(), caminho(requisicao)));
     }

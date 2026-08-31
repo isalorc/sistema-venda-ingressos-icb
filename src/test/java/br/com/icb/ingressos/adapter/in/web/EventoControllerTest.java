@@ -17,6 +17,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import br.com.icb.ingressos.domain.enums.StatusLote;
+import br.com.icb.ingressos.domain.enums.StatusVendas;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.ports.in.ConsultarEventoUseCase;
 import br.com.icb.ingressos.ports.in.ConsultarEventoUseCase.DetalheEvento;
@@ -36,25 +38,28 @@ class EventoControllerTest {
     void listaEventosDisponiveis() throws Exception {
         when(listarEventosDisponiveis.listar()).thenReturn(List.of(new EventoDisponivel(
                 1L, "Congresso", "descrição", LocalDateTime.of(2026, 12, 1, 20, 0),
-                new BigDecimal("50.00"), 8)));
+                new BigDecimal("50.00"), 8, StatusVendas.A_VENDA, null)));
 
         mockMvc.perform(get("/api/eventos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].menorPreco").value(50.00))
-                .andExpect(jsonPath("$[0].ingressosDisponiveis").value(8));
+                .andExpect(jsonPath("$[0].ingressosDisponiveis").value(8))
+                .andExpect(jsonPath("$[0].statusVendas").value("A_VENDA"));
     }
 
     @Test
     void detalhaEvento() throws Exception {
         when(consultarEvento.consultar(1L)).thenReturn(new DetalheEvento(
                 1L, "Congresso", "descrição", LocalDateTime.of(2026, 12, 1, 20, 0),
-                List.of(new DetalheEvento.LoteDisponivel(10L, "Inteira", new BigDecimal("50.00"), 40))));
+                List.of(new DetalheEvento.LoteDisponivel(10L, "Inteira", new BigDecimal("50.00"), 40,
+                        StatusLote.A_VENDA, null, null))));
 
         mockMvc.perform(get("/api/eventos/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome").value("Congresso"))
-                .andExpect(jsonPath("$.lotes[0].quantidadeDisponivel").value(40));
+                .andExpect(jsonPath("$.lotes[0].quantidadeDisponivel").value(40))
+                .andExpect(jsonPath("$.lotes[0].status").value("A_VENDA"));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package br.com.icb.ingressos.adapter.out.persistence.jpa;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import br.com.icb.ingressos.domain.Lote;
 import jakarta.persistence.Column;
@@ -43,22 +44,33 @@ class LoteJpa {
     @Column(name = "quantidade_disponivel", nullable = false)
     private int quantidadeDisponivel;
 
+    @Column(name = "inicio_vendas")
+    private LocalDateTime inicioVendas;
+
+    @Column(name = "fim_vendas")
+    private LocalDateTime fimVendas;
+
     private LoteJpa(Long id, Long eventoId, String nome, BigDecimal preco,
-                    int quantidadeTotal, int quantidadeDisponivel) {
+                    int quantidadeTotal, int quantidadeDisponivel,
+                    LocalDateTime inicioVendas, LocalDateTime fimVendas) {
         this.id = id;
         this.eventoId = eventoId;
         this.nome = nome;
         this.preco = preco;
         this.quantidadeTotal = quantidadeTotal;
         this.quantidadeDisponivel = quantidadeDisponivel;
+        this.inicioVendas = inicioVendas;
+        this.fimVendas = fimVendas;
     }
 
     static LoteJpa de(Lote lote) {
         return new LoteJpa(lote.getId(), lote.getEventoId(), lote.getNome(), lote.getPreco(),
-                lote.getQuantidadeTotal(), lote.getQuantidadeDisponivel());
+                lote.getQuantidadeTotal(), lote.getQuantidadeDisponivel(),
+                lote.getInicioVendas(), lote.getFimVendas());
     }
 
     Lote paraDominio() {
-        return Lote.reconstituir(id, eventoId, nome, preco, quantidadeTotal, quantidadeDisponivel);
+        return Lote.reconstituir(id, eventoId, nome, preco, quantidadeTotal, quantidadeDisponivel,
+                inicioVendas, fimVendas);
     }
 }

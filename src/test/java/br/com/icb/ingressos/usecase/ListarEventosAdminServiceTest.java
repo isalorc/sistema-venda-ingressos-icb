@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import br.com.icb.ingressos.domain.Evento;
 import br.com.icb.ingressos.domain.Lote;
+import br.com.icb.ingressos.domain.enums.StatusVendas;
 import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.LoteRepositoryPort;
 
@@ -56,12 +57,14 @@ class ListarEventosAdminServiceTest {
         assertThat(congresso.quantidadeLotes()).isEqualTo(2);
         assertThat(congresso.ingressosTotais()).isEqualTo(150);
         assertThat(congresso.ingressosDisponiveis()).isEqualTo(130);
+        assertThat(congresso.statusVendas()).isEqualTo(StatusVendas.A_VENDA);
 
         var retiro = eventos.get(0);
         assertThat(retiro.jaOcorreu()).isTrue();
         assertThat(retiro.quantidadeLotes()).isZero();
         assertThat(retiro.ingressosTotais()).isZero();
         assertThat(retiro.ingressosDisponiveis()).isZero();
+        assertThat(retiro.statusVendas()).isEqualTo(StatusVendas.ENCERRADA);
     }
 
     @Test
