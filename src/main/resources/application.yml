@@ -20,6 +20,8 @@ management:
 app:
   # Estratégia de persistência ativa: memoria | postgres
   persistencia: memoria
+  # Fuso das datas da API (horário local da igreja), independente do fuso do servidor.
+  fuso-horario: America/Sao_Paulo
   reserva:
     # TTL da reserva não paga (RN-2). Formato ISO-8601 Duration.
     ttl: PT15M
