@@ -16,26 +16,45 @@ public class Pedido {
     @EqualsAndHashCode.Include
     private final Long id;
     private final Long usuarioId;
+    /** Lote dos ingressos. Nulo só em pedidos antigos cujo lote não pôde ser recuperado. */
+    private final Long loteId;
+    private final int quantidadeIngressos;
     private final LocalDateTime dataPedido;
     private final BigDecimal valorTotal;
     private StatusPedido status;
 
-    private Pedido(Long id, Long usuarioId, LocalDateTime dataPedido,
-                   BigDecimal valorTotal, StatusPedido status) {
+    private Pedido(Long id, Long usuarioId, Long loteId, int quantidadeIngressos,
+                   LocalDateTime dataPedido, BigDecimal valorTotal, StatusPedido status) {
         this.id = id;
         this.usuarioId = Validacao.exigir(usuarioId, "usuarioId");
+        this.loteId = loteId;
+        this.quantidadeIngressos = Validacao.exigirPositivo(quantidadeIngressos, "quantidadeIngressos");
         this.dataPedido = Validacao.exigir(dataPedido, "dataPedido");
         this.valorTotal = Validacao.exigirDinheiro(valorTotal, "valorTotal");
         this.status = Validacao.exigir(status, "status");
     }
 
     public static Pedido novo(Long usuarioId, LocalDateTime dataPedido, BigDecimal valorTotal) {
-        return new Pedido(null, usuarioId, dataPedido, valorTotal, StatusPedido.PENDENTE);
+        return new Pedido(null, usuarioId, null, 1, dataPedido, valorTotal, StatusPedido.PENDENTE);
+    }
+
+    /** Pedido de {@code quantidadeIngressos} ingressos de um mesmo lote. */
+    public static Pedido novo(Long usuarioId, Long loteId, int quantidadeIngressos,
+                              LocalDateTime dataPedido, BigDecimal valorTotal) {
+        return new Pedido(null, usuarioId, Validacao.exigir(loteId, "loteId"), quantidadeIngressos,
+                dataPedido, valorTotal, StatusPedido.PENDENTE);
     }
 
     public static Pedido reconstituir(Long id, Long usuarioId, LocalDateTime dataPedido,
                                       BigDecimal valorTotal, StatusPedido status) {
-        return new Pedido(Validacao.exigir(id, "id"), usuarioId, dataPedido, valorTotal, status);
+        return reconstituir(id, usuarioId, null, 1, dataPedido, valorTotal, status);
+    }
+
+    public static Pedido reconstituir(Long id, Long usuarioId, Long loteId, int quantidadeIngressos,
+                                      LocalDateTime dataPedido, BigDecimal valorTotal,
+                                      StatusPedido status) {
+        return new Pedido(Validacao.exigir(id, "id"), usuarioId, loteId, quantidadeIngressos,
+                dataPedido, valorTotal, status);
     }
 
     public void marcarPago() {

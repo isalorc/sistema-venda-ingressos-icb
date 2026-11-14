@@ -36,6 +36,9 @@ class IngressoJpa {
     @Column(name = "pedido_id")
     private Long pedidoId;
 
+    @Column(name = "nome_participante")
+    private String nomeParticipante;
+
     @Column(name = "codigo_qr")
     private String codigoQr;
 
@@ -44,21 +47,23 @@ class IngressoJpa {
     private StatusIngresso status;
 
     private IngressoJpa(Long id, Long eventoId, Long loteId, Long pedidoId,
-                        String codigoQr, StatusIngresso status) {
+                        String nomeParticipante, String codigoQr, StatusIngresso status) {
         this.id = id;
         this.eventoId = eventoId;
         this.loteId = loteId;
         this.pedidoId = pedidoId;
+        this.nomeParticipante = nomeParticipante;
         this.codigoQr = codigoQr;
         this.status = status;
     }
 
     static IngressoJpa de(Ingresso ingresso) {
         return new IngressoJpa(ingresso.getId(), ingresso.getEventoId(), ingresso.getLoteId(),
-                ingresso.getPedidoId(), ingresso.getCodigoQr(), ingresso.getStatus());
+                ingresso.getPedidoId(), ingresso.getNomeParticipante(), ingresso.getCodigoQr(),
+                ingresso.getStatus());
     }
 
     Ingresso paraDominio() {
-        return Ingresso.reconstituir(id, eventoId, loteId, pedidoId, codigoQr, status);
+        return Ingresso.reconstituir(id, eventoId, loteId, pedidoId, nomeParticipante, codigoQr, status);
     }
 }

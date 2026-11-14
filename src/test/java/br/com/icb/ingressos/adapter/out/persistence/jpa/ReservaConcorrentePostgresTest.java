@@ -19,12 +19,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import br.com.icb.ingressos.domain.Evento;
 import br.com.icb.ingressos.domain.Ingresso;
 import br.com.icb.ingressos.domain.Lote;
+import br.com.icb.ingressos.domain.Usuario;
 import br.com.icb.ingressos.domain.enums.MetodoPagamento;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase.ComprarIngressoCommand;
 import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.IngressoRepositoryPort;
 import br.com.icb.ingressos.ports.out.LoteRepositoryPort;
+import br.com.icb.ingressos.ports.out.UsuarioRepositoryPort;
 
 /**
  * RNF-30: sob concorrência real, o estoque de um lote nunca fica negativo e o
@@ -39,6 +41,7 @@ class ReservaConcorrentePostgresTest extends IntegracaoPostgresTest {
     @Autowired private EventoRepositoryPort eventoRepository;
     @Autowired private LoteRepositoryPort loteRepository;
     @Autowired private IngressoRepositoryPort ingressoRepository;
+    @Autowired private UsuarioRepositoryPort usuarioRepository;
 
     @Test
     void vinteComprasSimultaneasDeUmLoteComCincoUnidadesVendemExatamenteCinco() throws Exception {
@@ -53,6 +56,12 @@ class ReservaConcorrentePostgresTest extends IntegracaoPostgresTest {
                 .mapToObj(i -> Ingresso.disponivel(evento.getId(), lote.getId()))
                 .toList());
 
+        var clientes = IntStream.range(0, concorrentes)
+                .mapToObj(i -> usuarioRepository.salvar(Usuario.comConta("Cliente " + i,
+                        "cliente" + i + "@exemplo.com", "1199999000" + (i % 10), "hash",
+                        LocalDateTime.now())).getId())
+                .toList();
+
         var barreira = new CyclicBarrier(concorrentes);
         var executor = Executors.newFixedThreadPool(concorrentes);
         try {
@@ -61,8 +70,8 @@ class ReservaConcorrentePostgresTest extends IntegracaoPostgresTest {
                         barreira.await(10, TimeUnit.SECONDS);
                         try {
                             comprarIngresso.comprar(new ComprarIngressoCommand(
-                                    lote.getId(), "Cliente " + i, "cliente" + i + "@exemplo.com",
-                                    "1199999000" + (i % 10), MetodoPagamento.PIX));
+                                    clientes.get(i), lote.getId(), List.of("Cliente " + i),
+                                    MetodoPagamento.PIX));
                             return true;
                         } catch (RuntimeException esgotadoOuConflito) {
                             return false;

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import br.com.icb.ingressos.domain.Ingresso;
@@ -41,6 +42,13 @@ class IngressoRepositoryJpa implements IngressoRepositoryPort {
     public Optional<Ingresso> buscarPrimeiroDisponivelDoLote(Long loteId) {
         return repository.findFirstByLoteIdAndStatus(loteId, StatusIngresso.DISPONIVEL)
                 .map(IngressoJpa::paraDominio);
+    }
+
+    @Override
+    public List<Ingresso> listarDisponiveisDoLote(Long loteId, int limite) {
+        return repository.findByLoteIdAndStatusOrderByIdAsc(loteId, StatusIngresso.DISPONIVEL,
+                        PageRequest.of(0, limite))
+                .stream().map(IngressoJpa::paraDominio).toList();
     }
 
     @Override

@@ -25,6 +25,7 @@ public interface ConsultarInscritosUseCase {
             String nomeLote,
             Long pedidoId,
             String codigoQr,
-            LocalDateTime dataCompra) {
+            LocalDateTime dataCompra,
+            String nomeParticipante) {
     }
 }

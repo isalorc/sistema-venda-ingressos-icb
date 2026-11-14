@@ -15,7 +15,8 @@ public record InscritoResponse(
         String nomeLote,
         Long pedidoId,
         String codigoQr,
-        LocalDateTime dataCompra) {
+        LocalDateTime dataCompra,
+        String nomeParticipante) {
 
     public static InscritoResponse de(Inscrito inscrito) {
         return new InscritoResponse(
@@ -26,6 +27,7 @@ public record InscritoResponse(
                 inscrito.nomeLote(),
                 inscrito.pedidoId(),
                 inscrito.codigoQr(),
-                inscrito.dataCompra());
+                inscrito.dataCompra(),
+                inscrito.nomeParticipante());
     }
 }

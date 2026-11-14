@@ -1,21 +1,27 @@
 package br.com.icb.ingressos.usecase;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.icb.ingressos.domain.ClassificacaoDeLotes;
+import br.com.icb.ingressos.domain.Ingresso;
 import br.com.icb.ingressos.domain.Lote;
 import br.com.icb.ingressos.domain.Pagamento;
 import br.com.icb.ingressos.domain.Pedido;
 import br.com.icb.ingressos.domain.Usuario;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
 import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
+import br.com.icb.ingressos.domain.exception.QuantidadeDeIngressosInvalidaException;
+import br.com.icb.ingressos.domain.exception.QuantidadeIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase;
@@ -29,13 +35,13 @@ import br.com.icb.ingressos.ports.out.PedidoRepositoryPort;
 import br.com.icb.ingressos.ports.out.UsuarioRepositoryPort;
 
 /**
- * Orquestra a compra de um ingresso (RF-04 a RF-10).
+ * Orquestra a compra de ingressos (RF-04 a RF-10).
  *
  * <p>A operação é transacional e serializa a reserva pelo bloqueio pessimista do
  * lote ({@link LoteRepositoryPort#buscarPorIdComBloqueio} — RNF-07): duas compras
  * concorrentes do mesmo lote esperam a transação anterior, o que impede a
  * quantidade disponível de ficar negativa e o mesmo ingresso de ser reservado
- * duas vezes.
+ * duas vezes. Ou o pedido reserva todos os ingressos pedidos, ou nenhum.
  */
 @Service
 public class ComprarIngressoService implements ComprarIngressoUseCase {
@@ -48,6 +54,7 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
     private final PagamentoRepositoryPort pagamentoRepository;
     private final GatewayPagamentoPort gatewayPagamento;
     private final Clock clock;
+    private final int maxIngressosPorPedido;
 
     public ComprarIngressoService(UsuarioRepositoryPort usuarioRepository,
                                   EventoRepositoryPort eventoRepository,
@@ -56,7 +63,8 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
                                   PedidoRepositoryPort pedidoRepository,
                                   PagamentoRepositoryPort pagamentoRepository,
                                   GatewayPagamentoPort gatewayPagamento,
-                                  Clock clock) {
+                                  Clock clock,
+                                  @Value("${app.compra.max-ingressos-por-pedido}") int maxIngressosPorPedido) {
         this.usuarioRepository = usuarioRepository;
         this.eventoRepository = eventoRepository;
         this.loteRepository = loteRepository;
@@ -65,47 +73,63 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
         this.pagamentoRepository = pagamentoRepository;
         this.gatewayPagamento = gatewayPagamento;
         this.clock = clock;
+        this.maxIngressosPorPedido = maxIngressosPorPedido;
     }
 
     @Override
     @Transactional
     public ResultadoCompra comprar(ComprarIngressoCommand comando) {
-        var cliente = resolverCliente(comando);
-
+        var participantes = validarParticipantes(comando.participantes());
+        var cliente = usuarioRepository.buscarPorId(comando.usuarioId())
+                .filter(Usuario::possuiConta)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente", comando.usuarioId()));
         var lote = loteRepository.buscarPorIdComBloqueio(comando.loteId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Lote", comando.loteId()));
-
         garantirEventoAtivo(lote.getEventoId());
         garantirQueEhOLoteAtivo(lote);
+        var quantidade = participantes.size();
+        if (lote.getQuantidadeDisponivel() < quantidade) {
+            throw new QuantidadeIndisponivelException(lote.getQuantidadeDisponivel());
+        }
+        var ingressos = ingressoRepository.listarDisponiveisDoLote(lote.getId(), quantidade);
+        if (ingressos.size() < quantidade) {
+            throw new QuantidadeIndisponivelException(ingressos.size());
+        }
 
-        var ingresso = ingressoRepository.buscarPrimeiroDisponivelDoLote(lote.getId())
-                .orElseThrow(() -> new IngressoEsgotadoException(lote.getId()));
-
-        lote.reservarUnidade();
-
+        var valorTotal = lote.getPreco().multiply(BigDecimal.valueOf(quantidade));
         var pedido = pedidoRepository.salvar(
-                Pedido.novo(cliente.getId(), agora(), lote.getPreco()));
-
-        ingresso.reservar(pedido.getId());
-        var ingressoReservado = ingressoRepository.salvar(ingresso);
+                Pedido.novo(cliente.getId(), lote.getId(), quantidade, agora(), valorTotal));
+        var ingressoIds = new ArrayList<Long>(quantidade);
+        for (var i = 0; i < quantidade; i++) {
+            lote.reservarUnidade();
+            Ingresso ingresso = ingressos.get(i);
+            ingresso.reservar(pedido.getId(), participantes.get(i));
+            ingressoIds.add(ingressoRepository.salvar(ingresso).getId());
+        }
         loteRepository.salvar(lote);
 
-        var cobranca = solicitarCobranca(comando, pedido, lote, cliente);
-
+        var cobranca = solicitarCobranca(comando, pedido, cliente);
         return new ResultadoCompra(
                 pedido.getId(),
-                ingressoReservado.getId(),
+                List.copyOf(ingressoIds),
                 pedido.getValorTotal(),
                 pedido.getStatus(),
                 cobranca.urlPagamento(),
                 cobranca.qrCodePix());
     }
 
-    /**
-     * Virada de lote (RNF / {@code docs/viradaDeLote.md}): só o lote ativo do
-     * evento vende. Recusa compras de lote agendado, encerrado ou ainda na fila.
-     * O lote travado entra na classificação com o estoque recém-lido.
-     */
+    /** RN-1: de 1 até o limite configurado, um nome não vazio por ingresso. */
+    private List<String> validarParticipantes(List<String> participantes) {
+        if (participantes == null || participantes.isEmpty()
+                || participantes.size() > maxIngressosPorPedido) {
+            throw new QuantidadeDeIngressosInvalidaException(maxIngressosPorPedido);
+        }
+        if (participantes.stream().anyMatch(nome -> nome == null || nome.isBlank())) {
+            throw new IllegalArgumentException("Informe o nome de cada participante.");
+        }
+        return participantes.stream().map(String::strip).toList();
+    }
+
     private void garantirEventoAtivo(Long eventoId) {
         var evento = eventoRepository.buscarPorId(eventoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Evento", eventoId));
@@ -114,11 +138,15 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
         }
     }
 
+    /**
+     * Virada de lote ({@code docs/viradaDeLote.md}): só o lote ativo do evento
+     * vende. Recusa compras de lote agendado, encerrado ou ainda na fila. O lote
+     * travado entra na classificação com o estoque recém-lido.
+     */
     private void garantirQueEhOLoteAtivo(Lote loteTravado) {
         var outrosLotes = loteRepository.listarPorEvento(loteTravado.getEventoId()).stream()
                 .filter(lote -> !Objects.equals(lote.getId(), loteTravado.getId()));
         var lotesDoEvento = Stream.concat(Stream.of(loteTravado), outrosLotes).toList();
-
         var classificacao = ClassificacaoDeLotes.de(lotesDoEvento, agora());
         if (classificacao.ativoEh(loteTravado.getId())) {
             return;
@@ -131,28 +159,13 @@ public class ComprarIngressoService implements ComprarIngressoUseCase {
         };
     }
 
-    /** RN-4: sem cadastro — reaproveita o cliente pelo e-mail ou cria um novo. */
-    private Usuario resolverCliente(ComprarIngressoCommand comando) {
-        if (comando.emailCliente() != null && !comando.emailCliente().isBlank()) {
-            var email = comando.emailCliente().strip().toLowerCase(Locale.ROOT);
-            var existente = usuarioRepository.buscarPorEmail(email);
-            if (existente.isPresent()) {
-                return existente.get();
-            }
-        }
-        return usuarioRepository.salvar(Usuario.novo(
-                comando.nomeCliente(), comando.emailCliente(), comando.telefoneCliente(), agora()));
-    }
-
     private GatewayPagamentoPort.CobrancaCriada solicitarCobranca(ComprarIngressoCommand comando,
-                                                                  Pedido pedido, Lote lote, Usuario cliente) {
+                                                                  Pedido pedido, Usuario cliente) {
         var pagamento = pagamentoRepository.salvar(
-                Pagamento.pendente(pedido.getId(), lote.getPreco(), comando.metodoPagamento()));
-
+                Pagamento.pendente(pedido.getId(), pedido.getValorTotal(), comando.metodoPagamento()));
         var cobranca = gatewayPagamento.criarCobranca(new DadosCobranca(
-                pedido.getId(), lote.getPreco(), comando.metodoPagamento(),
+                pedido.getId(), pedido.getValorTotal(), comando.metodoPagamento(),
                 cliente.getNome(), cliente.getEmail()));
-
         pagamento.vincularCobranca(cobranca.referenciaGateway());
         pagamentoRepository.salvar(pagamento);
         return cobranca;

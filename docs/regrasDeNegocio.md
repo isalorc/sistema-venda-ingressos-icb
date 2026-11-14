@@ -22,10 +22,10 @@ base para os casos de uso (`usecase`) e para o modelo de domínio (`domain`).
 
 | # | Tema | Regra no MVP | Evolução futura |
 |---|---|---|---|
-| **RN-1** | Ingressos por compra | **1 ingresso por pedido.** Cada operação de compra gera um `Pedido` com exatamente um `Ingresso`. | Até **N** ingressos por pedido, com limite máximo configurável. |
+| **RN-1** | Ingressos por compra | **1 a 5 ingressos por pedido**, todos do mesmo lote, com **um nome de participante por ingresso**. Limite configurável em `application.yml` (`app.compra.max-ingressos-por-pedido`). A reserva é tudo ou nada. | — |
 | **RN-2** | Expiração da reserva (TTL) | Reserva não paga expira **15 minutos** após a criação do `Pedido` (status `PENDENTE`). Valor configurável em `application.yml`. Um job periódico libera as reservas expiradas. | — |
 | **RN-3** | Métodos de pagamento | **PIX** e **CARTÃO**. Enum `MetodoPagamento = { PIX, CARTAO }`. | Adicionar **BOLETO** (compensação D+1, TTL de reserva próprio). |
-| **RN-4** | Identificação do cliente | **Sem cadastro/senha.** Na compra o cliente informa **nome, e-mail e telefone**. O sistema cria um `Usuario` novo ou reaproveita um existente pelo **e-mail**. O ingresso/QR é entregue por **e-mail**. | **Conta com login** (e-mail + senha), área autenticada "meus ingressos" e histórico de pedidos. |
+| **RN-4** | Identificação do cliente | **Conta obrigatória para comprar** (nome, e-mail, telefone e senha com hash BCrypt). Login devolve um JWT de cliente (`papel=CLIENTE`, 7 dias). A área do cliente lista os pedidos e mostra o QR de cada ingresso pago. Quem comprou sem conta antes disso ativa a conta cadastrando-se com o mesmo e-mail. O ingresso/QR também é entregue por **e-mail** (stub). | Recuperação de senha e confirmação de e-mail (dependem do envio real de e-mail). |
 | **RN-5** | Autenticação do administrador | **JWT próprio.** `POST /api/admin/login` (e-mail + senha) retorna um token; todas as rotas `/api/admin/**` exigem o token. Senhas com hash **BCrypt**. **Um único administrador**, provisionado por variável de ambiente (`ADMIN_EMAIL` / `ADMIN_SENHA_HASH`) — sem tela/endpoint de cadastro. Chave/segredo do JWT via variável de ambiente. | Rotação de credenciais, múltiplos perfis de admin (ver "Questões em aberto"), ou login via provedor externo (OAuth2) se necessário. |
 | **RN-6** | Geração do código QR do ingresso | O `codigo_qr` é gerado **somente após a confirmação do pagamento**. Na reserva o ingresso fica `RESERVADO` **sem código**; ao aprovar o pagamento, gera-se um identificador único (UUID / hash assinado) e o status passa a `VENDIDO`. | — |
 
@@ -33,8 +33,8 @@ base para os casos de uso (`usecase`) e para o modelo de domínio (`domain`).
 
 Detalhe completo em [`diagramaSequencia.drawio`](diagramaSequencia.drawio).
 
-1. Cliente escolhe um **lote** de um evento e envia seus dados (RN-4).
-2. Sistema resolve/cria o `Usuario` pelo e-mail.
+1. Cliente **logado** escolhe um **lote** e informa um nome por ingresso (RN-1, RN-4).
+2. Sistema identifica o `Usuario` pelo token.
 3. Sob **bloqueio de concorrência** (lock pessimista), busca um `Ingresso`
    `DISPONIVEL` do lote. Se não houver, retorna **esgotado** (HTTP 409).
 4. Marca o ingresso como `RESERVADO` (sem `codigo_qr` — RN-6) e decrementa

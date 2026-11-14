@@ -1,5 +1,6 @@
 package br.com.icb.ingressos.adapter.in.web.dto;
 
+import br.com.icb.ingressos.ports.in.ContaClienteUseCase;
 import br.com.icb.ingressos.ports.in.AutenticarAdminUseCase.TokenEmitido;
 
 /**
@@ -8,6 +9,10 @@ import br.com.icb.ingressos.ports.in.AutenticarAdminUseCase.TokenEmitido;
  * <p>Nas rotas {@code /api/admin/**} envie {@code Authorization: Bearer <token>}.
  */
 public record TokenResponse(String token, String tipo, long expiraEmSegundos) {
+
+    public static TokenResponse de(ContaClienteUseCase.TokenCliente emitido) {
+        return new TokenResponse(emitido.token(), emitido.tipo(), emitido.expiraEmSegundos());
+    }
 
     public static TokenResponse de(TokenEmitido emitido) {
         return new TokenResponse(emitido.token(), emitido.tipo(), emitido.expiraEmSegundos());

@@ -36,23 +36,28 @@ class UsuarioJpa {
     @Column(nullable = false)
     private String telefone;
 
+    @Column(name = "senha_hash", length = 100)
+    private String senhaHash;
+
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao;
 
-    private UsuarioJpa(Long id, String nome, String email, String telefone, LocalDateTime dataCriacao) {
+    private UsuarioJpa(Long id, String nome, String email, String telefone, String senhaHash,
+                       LocalDateTime dataCriacao) {
         this.id = id;
         this.nome = nome;
         this.email = email;
         this.telefone = telefone;
+        this.senhaHash = senhaHash;
         this.dataCriacao = dataCriacao;
     }
 
     static UsuarioJpa de(Usuario usuario) {
         return new UsuarioJpa(usuario.getId(), usuario.getNome(), usuario.getEmail(),
-                usuario.getTelefone(), usuario.getDataCriacao());
+                usuario.getTelefone(), usuario.getSenhaHash(), usuario.getDataCriacao());
     }
 
     Usuario paraDominio() {
-        return Usuario.reconstituir(id, nome, email, telefone, dataCriacao);
+        return Usuario.reconstituir(id, nome, email, telefone, senhaHash, dataCriacao);
     }
 }

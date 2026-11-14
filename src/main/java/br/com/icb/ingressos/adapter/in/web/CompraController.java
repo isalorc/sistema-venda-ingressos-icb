@@ -3,6 +3,7 @@ package br.com.icb.ingressos.adapter.in.web;
 import java.net.URI;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,12 +31,13 @@ public class CompraController {
     }
 
     @PostMapping
-    @Operation(summary = "Inicia a compra de um ingresso e retorna os dados de pagamento")
-    public ResponseEntity<CompraResponse> comprar(@Valid @RequestBody ComprarIngressoRequest requisicao) {
-        var resultado = comprarIngresso.comprar(requisicao.toCommand());
+    @Operation(summary = "Inicia a compra de 1 a N ingressos (requer login de cliente) e retorna os dados de pagamento")
+    public ResponseEntity<CompraResponse> comprar(@AuthenticationPrincipal Long usuarioId,
+                                                  @Valid @RequestBody ComprarIngressoRequest requisicao) {
+        var resultado = comprarIngresso.comprar(requisicao.toCommand(usuarioId));
         var corpo = CompraResponse.de(resultado);
         return ResponseEntity
-                .created(URI.create("/api/pedidos/" + corpo.pedidoId()))
+                .created(URI.create("/api/clientes/me/pedidos/" + corpo.pedidoId()))
                 .body(corpo);
     }
 }

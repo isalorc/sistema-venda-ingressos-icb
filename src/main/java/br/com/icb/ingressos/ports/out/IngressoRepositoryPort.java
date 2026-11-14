@@ -40,6 +40,9 @@ public interface IngressoRepositoryPort {
      * Ingressos de um pedido. Hoje é sempre um (RN-1), mas a assinatura já
      * suporta a evolução para N ingressos por pedido.
      */
+    /** Até {@code limite} ingressos DISPONIVEL do lote, em ordem de id. */
+    List<Ingresso> listarDisponiveisDoLote(Long loteId, int limite);
+
     List<Ingresso> listarPorPedido(Long pedidoId);
 
     /**

@@ -33,6 +33,12 @@ class PedidoJpa {
     @Column(name = "usuario_id", nullable = false)
     private Long usuarioId;
 
+    @Column(name = "lote_id")
+    private Long loteId;
+
+    @Column(name = "quantidade_ingressos", nullable = false)
+    private int quantidadeIngressos;
+
     @Column(name = "data_pedido", nullable = false)
     private LocalDateTime dataPedido;
 
@@ -43,21 +49,26 @@ class PedidoJpa {
     @Column(nullable = false, length = 20)
     private StatusPedido status;
 
-    private PedidoJpa(Long id, Long usuarioId, LocalDateTime dataPedido,
+    private PedidoJpa(Long id, Long usuarioId, Long loteId, int quantidadeIngressos,
+                      LocalDateTime dataPedido,
                       BigDecimal valorTotal, StatusPedido status) {
         this.id = id;
         this.usuarioId = usuarioId;
+        this.loteId = loteId;
+        this.quantidadeIngressos = quantidadeIngressos;
         this.dataPedido = dataPedido;
         this.valorTotal = valorTotal;
         this.status = status;
     }
 
     static PedidoJpa de(Pedido pedido) {
-        return new PedidoJpa(pedido.getId(), pedido.getUsuarioId(), pedido.getDataPedido(),
+        return new PedidoJpa(pedido.getId(), pedido.getUsuarioId(), pedido.getLoteId(),
+                pedido.getQuantidadeIngressos(), pedido.getDataPedido(),
                 pedido.getValorTotal(), pedido.getStatus());
     }
 
     Pedido paraDominio() {
-        return Pedido.reconstituir(id, usuarioId, dataPedido, valorTotal, status);
+        return Pedido.reconstituir(id, usuarioId, loteId, quantidadeIngressos, dataPedido,
+                valorTotal, status);
     }
 }

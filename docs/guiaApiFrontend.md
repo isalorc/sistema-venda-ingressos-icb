@@ -81,28 +81,36 @@ dados a cada restart — semeie um evento (ver [§9](#9-dados-de-teste)).
 
 ## 3. Autenticação
 
-Só as rotas `/api/admin/**` exigem token (menos o próprio login). Todo o resto é
-público.
+Há **dois tipos de token**, ambos JWT `Bearer`: o do **admin** e o do
+**cliente**. Cada um só abre as próprias rotas — token de cliente numa rota
+admin dá **403**, e vice-versa.
 
-| Rota | Token? |
+| Rota | Token |
 |---|---|
-| `GET /api/eventos`, `GET /api/eventos/{id}` | Não |
-| `POST /api/compras` | Não |
-| `POST /api/webhooks/pagamento` | Não (segredo próprio) |
-| `POST /api/admin/login` | Não |
-| `POST /api/admin/eventos`, `.../lotes` | **Sim** |
-| `GET /api/admin/eventos/{id}/inscritos` | **Sim** |
+| `GET /api/eventos`, `GET /api/eventos/{id}` | Nenhum |
+| `POST /api/clientes/cadastro`, `POST /api/clientes/login` | Nenhum |
+| `POST /api/compras` | **Cliente** |
+| `GET /api/clientes/me`, `GET /api/clientes/me/pedidos`, `GET /api/clientes/me/pedidos/{id}` | **Cliente** |
+| `POST /api/webhooks/pagamento` | Nenhum (segredo próprio) |
+| `POST /api/admin/login` | Nenhum |
+| demais `/api/admin/**` | **Admin** |
 
-**Fluxo:**
+**Admin:**
 
-1. **Login** — `POST /api/admin/login` com e-mail e senha. Retorna o token e a
-   validade.
-2. **Guardar o token** — em memória / `sessionStorage`. É um JWT assinado, expira
-   em **2 horas** (`expiraEmSegundos: 7200`). Não há refresh — expirou, faça
-   login de novo.
-3. **Enviar em cada chamada admin** — header `Authorization: Bearer <token>`.
+1. **Login** — `POST /api/admin/login` com e-mail e senha.
+2. **Guardar o token** — em memória / `sessionStorage`. Expira em **2 horas**
+   (`expiraEmSegundos: 7200`). Sem refresh — expirou, login de novo.
+3. **Enviar em cada chamada admin** — `Authorization: Bearer <token>`.
 
-Sem token (ou inválido/expirado) numa rota admin → **401** no formato padrão:
+**Cliente:**
+
+1. **Criar conta** — `POST /api/clientes/cadastro` (já devolve o token, o
+   cliente sai logado) **ou entrar** — `POST /api/clientes/login`.
+2. **Guardar o token** — `localStorage` é aceitável aqui. Expira em **7 dias**
+   (`expiraEmSegundos: 604800`). Sem refresh.
+3. **Enviar** em `POST /api/compras` e nas rotas `/api/clientes/me/**`.
+
+Sem token (ou inválido/expirado) numa rota protegida → **401** no formato padrão:
 
 ```json
 {
@@ -246,66 +254,153 @@ compra (independente do `status` dos lotes).
 
 **Erros:** `404` evento inexistente.
 
-### `POST /api/compras`
+### `POST /api/compras` *(requer token de cliente)*
 
-Inicia a compra de **um** ingresso (1 por pedido). Reserva um ingresso do lote
-sob trava de concorrência, cria o pedido/pagamento pendentes e devolve os dados
-de pagamento. A reserva expira em **15 minutos** se não for paga.
+Inicia a compra de **1 a 5 ingressos** do mesmo lote (um pedido). O comprador é
+o cliente do token; o corpo traz **um nome por ingresso** (participante).
+Reserva os ingressos sob trava de concorrência — ou todos, ou nenhum —, cria o
+pedido/pagamento pendentes e devolve os dados de pagamento. A reserva expira em
+**15 minutos** se não for paga.
 
 **Corpo:**
 
 | Campo | Tipo | Regras |
 |---|---|---|
 | `loteId` | `Long` | obrigatório |
-| `nome` | string | obrigatório · não vazio |
-| `email` | string | obrigatório · e-mail válido |
-| `telefone` | string | obrigatório · não vazio · sem máscara imposta |
+| `participantes` | `string[]` | obrigatório · 1 a 5 nomes · nenhum vazio |
 | `metodoPagamento` | enum | obrigatório · `PIX` ou `CARTAO` |
 
 ```json
 {
   "loteId": 10,
-  "nome": "Ana Ribeiro",
-  "email": "ana@exemplo.com",
-  "telefone": "11988887777",
+  "participantes": ["Ana Ribeiro", "Bruno Ribeiro"],
   "metodoPagamento": "PIX"
 }
 ```
 
-**201** — `Location: /api/pedidos/{pedidoId}`:
+**201** — `Location: /api/clientes/me/pedidos/{pedidoId}`:
 
 ```json
 {
   "pedidoId": 5,
-  "ingressoId": 42,
-  "valorTotal": 60.00,
+  "ingressoIds": [42, 43],
+  "valorTotal": 120.00,
   "statusPedido": "PENDENTE",
   "urlPagamento": "https://pagamento.fake/checkout/fake-9b1c...",
   "qrCodePix": "00020126FAKE-PIX-fake-9b1c..."
 }
 ```
 
+- `valorTotal` = preço do lote × quantidade de participantes.
 - `qrCodePix` vem preenchido só para `PIX`; para `CARTAO` é `null`.
 - `urlPagamento` sempre vem, mas hoje é **sintética** (gateway fake) — ver [§9](#9-lacunas-conhecidas).
-- O cliente é resolvido pelo e-mail: se já comprou antes com o mesmo e-mail,
-  reaproveita o cadastro.
 - **O `loteId` tem de ser o lote à venda (`A_VENDA`).** Comprar de lote agendado,
   encerrado ou na fila → `409`.
+- O limite de 5 por pedido é configurável no backend
+  (`app.compra.max-ingressos-por-pedido`).
 
 **Erros:**
 
 | Status | Situação | `mensagem` |
 |---|---|---|
+| `401` | sem token de cliente (ou expirado) | "Autenticação obrigatória para esta rota." |
 | `404` | lote inexistente | — |
 | `409` | evento cancelado | "As vendas deste evento foram encerradas." |
 | `409` | lote esgotado | "O lote N não possui ingressos disponíveis." |
+| `409` | lote tem menos ingressos que o pedido | "Restam apenas N ingressos neste lote." |
 | `409` | vendas do lote encerradas (`fimVendas` passou) | "As vendas deste lote foram encerradas." |
 | `409` | lote ainda não abriu (`AGENDADO`) | "As vendas deste lote ainda não começaram." |
 | `409` | lote na fila (há um lote anterior à venda) | "Este lote ainda não está disponível." |
-| `422` | campo inválido | — |
+| `422` | campo inválido / nome de participante vazio | — |
+| `422` | mais participantes que o limite | "Informe de 1 a 5 participantes por pedido." |
 
 O front já trata `409` recarregando `GET /api/eventos/{id}` — a `mensagem` nova
 aparece de brinde.
+
+---
+
+## 6.1 Endpoints — Área do cliente
+
+### `POST /api/clientes/cadastro` *(público)*
+
+| Campo | Tipo | Regras |
+|---|---|---|
+| `nome` | string | obrigatório |
+| `email` | string | obrigatório · e-mail válido · único |
+| `telefone` | string | obrigatório |
+| `senha` | string | obrigatório · 8 a 72 caracteres |
+
+**201** — o cliente já sai logado:
+
+```json
+{ "token": "eyJhbGciOiJIUzI1NiJ9...", "tipo": "Bearer", "expiraEmSegundos": 604800 }
+```
+
+- E-mail que **já tem conta** → `409` "Já existe uma conta com este e-mail.
+  Entre com sua senha."
+- E-mail que comprou **antes do login existir** (sem conta) → a conta é ativada
+  nesse cadastro e os pedidos antigos aparecem em "Meus pedidos".
+
+### `POST /api/clientes/login` *(público)*
+
+Corpo `{ "email", "senha" }`. **200** com o mesmo formato do cadastro.
+`401` "E-mail ou senha inválidos." (mensagem genérica de propósito).
+
+### `GET /api/clientes/me` *(token de cliente)*
+
+```json
+{ "id": 7, "nome": "Ana Ribeiro", "email": "ana@exemplo.com", "telefone": "11988887777" }
+```
+
+### `GET /api/clientes/me/pedidos` *(token de cliente)*
+
+Pedidos do cliente, **mais recentes primeiro**.
+
+```json
+[
+  {
+    "id": 5,
+    "dataPedido": "2026-08-30T21:14:05",
+    "status": "PENDENTE",
+    "valorTotal": 120.00,
+    "quantidadeIngressos": 2,
+    "evento": {
+      "id": 1, "nome": "Congresso de Louvor 2026",
+      "dataHora": "2026-12-20T19:00:00", "dataFim": null, "imagemUrl": null,
+      "loteId": 10, "nomeLote": "1º Lote"
+    },
+    "expiraEm": "2026-08-30T21:29:05"
+  }
+]
+```
+
+- `status`: `PENDENTE` · `PAGO` · `CANCELADO` (pagamento recusado) · `EXPIRADO`.
+- `expiraEm` só vem em `PENDENTE` — use para a contagem regressiva da reserva.
+- `evento` é `null` só em pedidos antigos cujo lote não pôde ser recuperado.
+
+### `GET /api/clientes/me/pedidos/{pedidoId}` *(token de cliente)*
+
+Os campos do item acima, mais o pagamento e os ingressos:
+
+```json
+{
+  "id": 5, "dataPedido": "...", "status": "PAGO", "valorTotal": 120.00,
+  "quantidadeIngressos": 2, "evento": { "...": "..." }, "expiraEm": null,
+  "metodoPagamento": "PIX",
+  "statusPagamento": "APROVADO",
+  "ingressos": [
+    { "id": 42, "nomeParticipante": "Ana Ribeiro", "status": "VENDIDO",
+      "codigoQr": "b7c2f1e0-8a9d-4e3b-9c1a-2f4d6a8e0c11" },
+    { "id": 43, "nomeParticipante": "Bruno Ribeiro", "status": "VENDIDO",
+      "codigoQr": "0c5d7e21-..." }
+  ]
+}
+```
+
+- `codigoQr` só vem depois do pagamento aprovado (`PAGO`). Em `PENDENTE` os
+  ingressos vêm `RESERVADO` sem QR.
+- Em `EXPIRADO`/`CANCELADO`, `ingressos` vem **vazio** (voltaram ao estoque).
+- Pedido de outro cliente → `404` (não revela que existe).
 
 ---
 
@@ -488,7 +583,11 @@ Apaga o lote e seus ingressos. Permitida **só se nenhum ingresso do lote está
 
 ### `GET /api/admin/eventos/{eventoId}/inscritos` *(requer token)*
 
-Lista os inscritos confirmados: clientes com **pedido pago** e ingresso vendido.
+Lista os inscritos confirmados: **um item por ingresso vendido** de pedido pago.
+`nomeParticipante` é quem vai ao evento; `nomeCliente`/`emailCliente`/
+`telefoneCliente` são do comprador (o mesmo para todos os ingressos de um
+pedido). `nomeParticipante` é `null` em ingressos vendidos antes da compra com
+vários participantes.
 Reservas pendentes e expiradas **não** entram. Array vazio se ninguém pagou.
 
 **200:**
@@ -503,7 +602,8 @@ Reservas pendentes e expiradas **não** entram. Array vazio se ninguém pagou.
     "nomeLote": "1º Lote",
     "pedidoId": 5,
     "codigoQr": "b7c2f1e0-8a9d-4e3b-9c1a-2f4d6a8e0c11",
-    "dataCompra": "2026-08-30T21:14:05"
+    "dataCompra": "2026-08-30T21:14:05",
+    "nomeParticipante": "Bruno Ribeiro"
   }
 ]
 ```
@@ -532,21 +632,22 @@ acontece depois, quando o gateway notifica.
 2. **Detalhe** — `GET /api/eventos/{id}` → só o lote `status: "A_VENDA"` fica
    selecionável. `AGENDADO` → "abre em DD/MM"; `ENCERRADO`/`ESGOTADO` → etiqueta.
    Sem nenhum lote `A_VENDA`, esconda o botão "Continuar".
-3. **Dados do cliente + método** — formulário: nome, e-mail, telefone,
-   `PIX`/`CARTAO`.
-4. **Criar a compra** — `POST /api/compras` com o `loteId` do lote `A_VENDA` →
+3. **Login** — comprar exige conta. Sem token, mande para login/cadastro e
+   volte para o checkout depois.
+4. **Participantes + método** — 1 a 5 nomes (o primeiro pode vir preenchido
+   com o nome do cliente) e `PIX`/`CARTAO`. Mostre o total (preço × quantidade).
+5. **Criar a compra** — `POST /api/compras` com o `loteId` do lote `A_VENDA` →
    `201` com `pedidoId`, `valorTotal`, `urlPagamento`, `qrCodePix`. Trate `409`
-   (esgotou/virou entre o passo 2 e agora) recarregando o detalhe.
-5. **Tela de pagamento** — mostra o QR PIX (`qrCodePix`) ou manda para
+   (esgotou/virou/restam menos ingressos) recarregando o detalhe.
+6. **Tela de pagamento** — mostra o QR PIX (`qrCodePix`) ou manda para
    `urlPagamento`. A reserva vale 15 min.
-6. **Confirmação — *aqui falta endpoint*.** Não há como o cliente consultar se o
-   pedido foi pago. O pedido vira `PAGO` quando o gateway chama o webhook, e o
-   ingresso é entregue por e-mail (stub). Por enquanto: mostrar "aguardando
-   confirmação do pagamento — o ingresso chega no seu e-mail". Em dev/teste,
-   você "confirma" chamando o webhook manualmente (Postman / curl).
+7. **Acompanhar** — `GET /api/clientes/me/pedidos/{pedidoId}` mostra o status;
+   quando vira `PAGO`, cada ingresso traz o `codigoQr`. O pedido vira `PAGO`
+   quando o gateway chama o webhook — em dev/teste, chame o webhook à mão
+   (Postman / curl).
 
 > **Reserva temporária.** Entre o `201` da compra e o pagamento, o ingresso fica
-> `RESERVADO` e o estoque do lote já é decrementado. Se 15 min passam sem
+> `RESERVADO` e o estoque do lote já é decrementado (um por participante). Se 15 min passam sem
 > pagamento, um job libera tudo de volta — o pedido vira `EXPIRADO`.
 
 ---
@@ -556,10 +657,13 @@ acontece depois, quando o gateway notifica.
 O que **ainda não existe** no backend e afeta o frontend. Planeje as telas
 sabendo disso.
 
-- **Consulta de pedido / pagamento pelo cliente.** Não há `GET /api/pedidos/{id}`
-  (o header `Location` da compra aponta para uma rota que não responde). O
-  cliente não acompanha o status do pedido nem vê "meus ingressos". A tela
-  pós-compra é um estado informativo, sem polling.
+- **Conta do cliente enxuta.** Sem "esqueci minha senha", sem troca de senha e
+  sem editar perfil. O e-mail não é confirmado (não há envio real de e-mail):
+  quem se cadastra com o e-mail de uma compra antiga, feita sem conta, passa a
+  ver aqueles pedidos.
+- **Retomar o pagamento.** O detalhe do pedido não devolve de novo
+  `urlPagamento`/`qrCodePix`; se o cliente sair da tela de pagamento, o pedido
+  pendente expira em 15 min e ele compra de novo.
 - **Gateway de pagamento é fake.** `urlPagamento`
   (`https://pagamento.fake/checkout/...`) e `qrCodePix` (`00020126FAKE-PIX-...`)
   são sintéticos — não abrem checkout real nem geram PIX pagável. A integração
@@ -608,10 +712,15 @@ curl -s -X POST localhost:8080/api/admin/eventos/1/lotes \
   -H 'Content-Type: application/json' -H 'Authorization: Bearer TOKEN' \
   -d '{"nome":"1o Lote","preco":60.00,"quantidadeTotal":120}'
 
-# 4. (cliente) comprar
-curl -s -X POST localhost:8080/api/compras \
+# 4. (cliente) criar conta — guarde o token do cliente
+curl -s -X POST localhost:8080/api/clientes/cadastro \
   -H 'Content-Type: application/json' \
-  -d '{"loteId":10,"nome":"Ana","email":"ana@exemplo.com","telefone":"11988887777","metodoPagamento":"PIX"}'
+  -d '{"nome":"Ana","email":"ana@exemplo.com","telefone":"11988887777","senha":"senha-forte"}'
+
+# 5. (cliente) comprar 2 ingressos (troque TOKEN_CLIENTE)
+curl -s -X POST localhost:8080/api/compras \
+  -H 'Content-Type: application/json' -H 'Authorization: Bearer TOKEN_CLIENTE' \
+  -d '{"loteId":10,"participantes":["Ana","Bruno"],"metodoPagamento":"PIX"}'
 ```
 
 **Atalho:** há uma collection do Postman em [`postman/`](postman/) que já faz

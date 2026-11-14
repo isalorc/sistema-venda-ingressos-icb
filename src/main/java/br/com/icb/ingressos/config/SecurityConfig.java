@@ -25,17 +25,19 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import br.com.icb.ingressos.adapter.in.web.ErroResponse;
-import br.com.icb.ingressos.adapter.in.web.JwtAdminFilter;
+import br.com.icb.ingressos.adapter.in.web.JwtFilter;
 import br.com.icb.ingressos.ports.out.TokenAdminPort;
+import br.com.icb.ingressos.ports.out.TokenClientePort;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Segurança das rotas administrativas (RF-26 / RNF-12) e CORS (RNF-16).
+ * Segurança das rotas (RF-26 / RNF-12) e CORS (RNF-16).
  *
- * <p>API stateless: sem sessão, sem CSRF. Só {@code /api/admin/**} (exceto o
- * login) exige token; o resto — consulta de eventos, compra, webhook, health,
- * Swagger — segue público. As respostas 401/403 saem no mesmo formato
+ * <p>API stateless: sem sessão, sem CSRF. {@code /api/admin/**} (exceto o login)
+ * exige token de admin; {@code /api/compras/**} e {@code /api/clientes/**}
+ * (exceto cadastro e login) exigem token de cliente. O resto — consulta de
+ * eventos, webhook, health, Swagger — segue público. As respostas 401/403 saem no mesmo formato
  * {@link ErroResponse} do resto da API.
  */
 @Configuration
@@ -45,6 +47,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http,
                                     TokenAdminPort tokenAdmin,
+                                    TokenClientePort tokenCliente,
                                     ObjectMapper objectMapper) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
@@ -53,8 +56,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(rotas -> rotas
                         .requestMatchers("/api/admin/login").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/clientes/cadastro", "/api/clientes/login").permitAll()
+                        .requestMatchers("/api/clientes/**", "/api/compras/**").hasRole("CLIENTE")
                         .anyRequest().permitAll())
-                .addFilterBefore(new JwtAdminFilter(tokenAdmin), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JwtFilter(tokenAdmin, tokenCliente), UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(tratamento -> tratamento
                         .authenticationEntryPoint(entryPoint(objectMapper))
                         .accessDeniedHandler(accessDeniedHandler(objectMapper)))

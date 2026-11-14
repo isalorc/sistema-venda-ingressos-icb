@@ -1,6 +1,7 @@
 package br.com.icb.ingressos.adapter.in.web.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import br.com.icb.ingressos.domain.enums.StatusPedido;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase.ResultadoCompra;
@@ -11,7 +12,7 @@ import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase.ResultadoCompra;
  */
 public record CompraResponse(
         Long pedidoId,
-        Long ingressoId,
+        List<Long> ingressoIds,
         BigDecimal valorTotal,
         StatusPedido statusPedido,
         String urlPagamento,
@@ -20,7 +21,7 @@ public record CompraResponse(
     public static CompraResponse de(ResultadoCompra resultado) {
         return new CompraResponse(
                 resultado.pedidoId(),
-                resultado.ingressoId(),
+                resultado.ingressoIds(),
                 resultado.valorTotal(),
                 resultado.statusPedido(),
                 resultado.urlPagamento(),

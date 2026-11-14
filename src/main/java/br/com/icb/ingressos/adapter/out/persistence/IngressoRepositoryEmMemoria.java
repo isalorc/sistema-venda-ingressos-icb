@@ -1,6 +1,7 @@
 package br.com.icb.ingressos.adapter.out.persistence;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,15 @@ class IngressoRepositoryEmMemoria extends RepositorioEmMemoria<Ingresso> impleme
     public Optional<Ingresso> buscarPrimeiroDisponivelDoLote(Long loteId) {
         return primeiro(ingresso -> ingresso.getLoteId().equals(loteId)
                 && ingresso.getStatus() == StatusIngresso.DISPONIVEL);
+    }
+
+    @Override
+    public List<Ingresso> listarDisponiveisDoLote(Long loteId, int limite) {
+        return filtrar(ingresso -> ingresso.getLoteId().equals(loteId)
+                && ingresso.getStatus() == StatusIngresso.DISPONIVEL).stream()
+                .sorted(Comparator.comparing(Ingresso::getId))
+                .limit(limite)
+                .toList();
     }
 
     @Override
@@ -72,6 +82,6 @@ class IngressoRepositoryEmMemoria extends RepositorioEmMemoria<Ingresso> impleme
     @Override
     protected Ingresso comId(Ingresso ingresso, long id) {
         return Ingresso.reconstituir(id, ingresso.getEventoId(), ingresso.getLoteId(),
-                ingresso.getPedidoId(), ingresso.getCodigoQr(), ingresso.getStatus());
+                ingresso.getPedidoId(), ingresso.getNomeParticipante(), ingresso.getCodigoQr(), ingresso.getStatus());
     }
 }

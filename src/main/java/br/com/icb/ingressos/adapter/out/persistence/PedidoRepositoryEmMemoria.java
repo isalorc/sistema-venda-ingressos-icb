@@ -1,6 +1,7 @@
 package br.com.icb.ingressos.adapter.out.persistence;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,14 @@ class PedidoRepositoryEmMemoria extends RepositorioEmMemoria<Pedido> implements 
     }
 
     @Override
+    public List<Pedido> listarPorUsuario(Long usuarioId) {
+        return filtrar(pedido -> pedido.getUsuarioId().equals(usuarioId)).stream()
+                .sorted(Comparator.comparing(Pedido::getDataPedido)
+                        .thenComparing(Pedido::getId).reversed())
+                .toList();
+    }
+
+    @Override
     public List<Pedido> listarPendentesCriadosAntesDe(LocalDateTime limite) {
         return filtrar(pedido -> pedido.getStatus() == StatusPedido.PENDENTE
                 && pedido.getDataPedido().isBefore(limite));
@@ -38,7 +47,8 @@ class PedidoRepositoryEmMemoria extends RepositorioEmMemoria<Pedido> implements 
 
     @Override
     protected Pedido comId(Pedido pedido, long id) {
-        return Pedido.reconstituir(id, pedido.getUsuarioId(), pedido.getDataPedido(),
+        return Pedido.reconstituir(id, pedido.getUsuarioId(), pedido.getLoteId(),
+                pedido.getQuantidadeIngressos(), pedido.getDataPedido(),
                 pedido.getValorTotal(), pedido.getStatus());
     }
 }

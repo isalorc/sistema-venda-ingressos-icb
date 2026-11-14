@@ -45,6 +45,7 @@ public class JwtTokenAdmin implements TokenAdminPort {
         var agora = clock.instant();
         return Jwts.builder()
                 .subject(emailAdmin)
+                .claim(PapelToken.CLAIM, PapelToken.ADMIN)
                 .issuedAt(Date.from(agora))
                 .expiration(Date.from(agora.plus(expiracao)))
                 .signWith(chave)
@@ -54,14 +55,17 @@ public class JwtTokenAdmin implements TokenAdminPort {
     @Override
     public Optional<String> validar(String token) {
         try {
-            var email = Jwts.parser()
+            var claims = Jwts.parser()
                     .verifyWith(chave)
                     .clock(() -> Date.from(clock.instant()))
                     .build()
                     .parseSignedClaims(token)
-                    .getPayload()
-                    .getSubject();
-            return Optional.ofNullable(email);
+                    .getPayload();
+            // Token de cliente usa a mesma chave: sem o papel ADMIN, não entra no painel.
+            if (!PapelToken.ADMIN.equals(claims.get(PapelToken.CLAIM, String.class))) {
+                return Optional.empty();
+            }
+            return Optional.ofNullable(claims.getSubject());
         } catch (JwtException | IllegalArgumentException excecao) {
             log.debug("Token de admin rejeitado: {}", excecao.getMessage());
             return Optional.empty();

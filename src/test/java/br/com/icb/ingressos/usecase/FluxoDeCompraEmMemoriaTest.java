@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import br.com.icb.ingressos.domain.Evento;
 import br.com.icb.ingressos.domain.Ingresso;
 import br.com.icb.ingressos.domain.Lote;
+import br.com.icb.ingressos.domain.Usuario;
 import br.com.icb.ingressos.domain.enums.MetodoPagamento;
 import br.com.icb.ingressos.domain.enums.StatusIngresso;
 import br.com.icb.ingressos.domain.enums.StatusPagamento;
@@ -27,6 +28,7 @@ import br.com.icb.ingressos.ports.out.IngressoRepositoryPort;
 import br.com.icb.ingressos.ports.out.LoteRepositoryPort;
 import br.com.icb.ingressos.ports.out.PagamentoRepositoryPort;
 import br.com.icb.ingressos.ports.out.PedidoRepositoryPort;
+import br.com.icb.ingressos.ports.out.UsuarioRepositoryPort;
 
 /**
  * Integração dos Épicos 3 + 5 + 6.1: os casos de uso reais sobre os repositórios
@@ -42,6 +44,12 @@ class FluxoDeCompraEmMemoriaTest {
     @Autowired private IngressoRepositoryPort ingressoRepository;
     @Autowired private PedidoRepositoryPort pedidoRepository;
     @Autowired private PagamentoRepositoryPort pagamentoRepository;
+    @Autowired private UsuarioRepositoryPort usuarioRepository;
+
+    private Long cliente(String nome, String email) {
+        return usuarioRepository.salvar(Usuario.comConta(nome, email, "11999990000", "hash",
+                LocalDateTime.now())).getId();
+    }
 
     @Test
     void compraReservaOIngressoEOWebhookAprovadoConfirmaAVendaDeFormaIdempotente() {
@@ -54,7 +62,8 @@ class FluxoDeCompraEmMemoriaTest {
                 Ingresso.disponivel(evento.getId(), lote.getId())));
 
         var compra = comprarIngresso.comprar(new ComprarIngressoCommand(
-                lote.getId(), "Maria", "maria@exemplo.com", "11999990000", MetodoPagamento.PIX));
+                cliente("Maria", "maria-memoria@exemplo.com"), lote.getId(), List.of("Maria"),
+                MetodoPagamento.PIX));
 
         assertThat(compra.statusPedido()).isEqualTo(StatusPedido.PENDENTE);
         assertThat(compra.valorTotal()).isEqualByComparingTo("50.00");
