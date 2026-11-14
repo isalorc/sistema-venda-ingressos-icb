@@ -103,6 +103,30 @@ class ContaClienteServiceTest {
     }
 
     @Test
+    void telefoneComMascaraEhGuardadoSoComDigitos() {
+        when(usuarioRepository.buscarPorEmail("ana@email.com")).thenReturn(Optional.empty());
+        salvarDevolvendoComId();
+        when(tokenCliente.gerar(7L)).thenReturn("token-7");
+
+        service.cadastrar(new Cadastro("Ana", "ana@email.com", "(13) 99999-8888", "senha-forte"));
+
+        var salvo = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).salvar(salvo.capture());
+        assertThat(salvo.getValue().getTelefone()).isEqualTo("13999998888");
+    }
+
+    @Test
+    void telefoneInvalidoRecusaOCadastro() {
+        when(usuarioRepository.buscarPorEmail("ana@email.com")).thenReturn(Optional.empty());
+
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> service.cadastrar(new Cadastro("Ana", "ana@email.com", "12345", "senha-forte")))
+                .withMessageContaining("Telefone inválido");
+
+        verify(usuarioRepository, never()).salvar(any());
+    }
+
+    @Test
     void senhaCurtaRecusaOCadastro() {
         assertThatExceptionOfType(IllegalArgumentException.class)
                 .isThrownBy(() -> service.cadastrar(new Cadastro("Maria", "m@e.com", "1", "curta")))

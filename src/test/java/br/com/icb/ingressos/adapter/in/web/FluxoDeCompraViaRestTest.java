@@ -71,6 +71,13 @@ class FluxoDeCompraViaRestTest {
         assertThat(cliente.postForEntity("/api/compras", json(corpoCompra), Map.class).getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
 
+        // Telefone sem DDD é recusado com erro no campo
+        var telefoneInvalido = cliente.postForEntity("/api/clientes/cadastro", json("""
+                { "nome": "Ana", "email": "ana-rest@exemplo.com", "telefone": "99999-8888",
+                  "senha": "senha-forte" }"""), Map.class);
+        assertThat(telefoneInvalido.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(telefoneInvalido.getBody().toString()).contains("telefone");
+
         // Cliente cria a conta (já sai logado) e compra dois ingressos
         var cadastro = cliente.postForEntity("/api/clientes/cadastro", json("""
                 { "nome": "Ana", "email": "ana-rest@exemplo.com", "telefone": "11988887777",

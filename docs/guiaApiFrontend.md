@@ -327,7 +327,7 @@ aparece de brinde.
 |---|---|---|
 | `nome` | string | obrigatório |
 | `email` | string | obrigatório · e-mail válido · único |
-| `telefone` | string | obrigatório |
+| `telefone` | string | obrigatório · DDD + número: celular (9 dígitos, começa com 9) ou fixo (8 dígitos) · aceita máscara e `+55` |
 | `senha` | string | obrigatório · 8 a 72 caracteres |
 
 **201** — o cliente já sai logado:
@@ -336,6 +336,8 @@ aparece de brinde.
 { "token": "eyJhbGciOiJIUzI1NiJ9...", "tipo": "Bearer", "expiraEmSegundos": 604800 }
 ```
 
+- O telefone é guardado **só com dígitos** (ex.: `13999998888`); o `GET /api/clientes/me`
+  devolve nesse formato. Inválido → `422` com `camposInvalidos[].campo = "telefone"`.
 - E-mail que **já tem conta** → `409` "Já existe uma conta com este e-mail.
   Entre com sua senha."
 - E-mail que comprou **antes do login existir** (sem conta) → a conta é ativada

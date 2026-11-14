@@ -44,10 +44,10 @@ public class Usuario {
         return new Usuario(null, nome, email, telefone, null, dataCriacao);
     }
 
-    /** Cliente com conta (cadastro na área do cliente). */
+    /** Cliente com conta (cadastro na área do cliente). O telefone é validado e guardado só com dígitos. */
     public static Usuario comConta(String nome, String email, String telefone, String senhaHash,
                                    LocalDateTime dataCriacao) {
-        return new Usuario(null, nome, email, telefone,
+        return new Usuario(null, nome, email, Telefone.normalizar(telefone),
                 Validacao.exigirTexto(senhaHash, "senhaHash"), dataCriacao);
     }
 
@@ -74,7 +74,7 @@ public class Usuario {
             throw new TransicaoInvalidaException("Já existe uma conta com este e-mail.");
         }
         this.nome = Validacao.exigirTexto(nome, "nome");
-        this.telefone = Validacao.exigirTexto(telefone, "telefone");
+        this.telefone = Telefone.normalizar(telefone);
         this.senhaHash = Validacao.exigirTexto(senhaHash, "senhaHash");
     }
 
