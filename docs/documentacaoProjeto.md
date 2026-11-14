@@ -52,25 +52,33 @@ regras de negócio dos eventos. Este é o objetivo central do projeto.
 - **Stack backend:** Spring Boot 3 (Spring Web, Spring Data JPA, Spring Security).
   O core do hexágono (`domain`, `usecase`) permanece livre de anotações de
   framework.
-- **Frontend:** projeto/repositório separado. Este repositório entrega apenas a
-  API REST + webhook de pagamento.
+- **Frontend:** projeto/repositório separado (`sistema-venda-ingressos-icb-web`,
+  Vue 3 + TypeScript). Este repositório entrega apenas a API REST + webhook de
+  pagamento.
 - **Gateway de pagamento:** porta de saída com adapter *fake* no MVP; integração
   real com o Mercado Pago (sandbox) em etapa posterior.
-- **Persistência:** adapter em memória no MVP para validar os casos de uso;
-  depois JPA/PostgreSQL + Flyway + lock pessimista.
+- **Persistência:** adapter em memória no perfil `dev` e JPA/PostgreSQL (Neon) +
+  Flyway + lock pessimista no perfil `prod`, escolhidos por `app.persistencia`.
 - **Single POM:** um único `pom.xml` na raiz, sem multi-module.
-- **Autenticação admin:** JWT próprio, senhas com hash BCrypt.
+- **Autenticação:** JWT próprio para o administrador (2 h) e para o cliente
+  (7 dias), com a mesma chave e um *claim* `papel` (`ADMIN` / `CLIENTE`) que
+  impede um token de acessar as rotas do outro. Senhas com hash BCrypt.
+- **Relógio:** `Clock` no fuso da igreja (`app.fuso-horario`, America/Sao_Paulo),
+  independente do fuso do servidor.
 
 ## 4. Regras de negócio
 
 Acordadas com o time e detalhadas em [`regrasDeNegocio.md`](regrasDeNegocio.md)
-(RN-1 a RN-6): 1 ingresso por pedido, TTL de reserva de 15 min, pagamento
-PIX/cartão, identificação do cliente sem cadastro, autenticação admin via JWT e
-geração do QR somente após o pagamento aprovado.
+(RN-1 a RN-6): 1 a 5 ingressos por pedido com um nome de participante por
+ingresso, TTL de reserva de 15 min, pagamento PIX/cartão, conta obrigatória do
+cliente para comprar, autenticação admin via JWT e geração do QR (um por
+ingresso) somente após o pagamento aprovado. A virada de lote e a gestão de
+eventos estão em [`viradaDeLote.md`](viradaDeLote.md) e
+[`gestaoDeEventos.md`](gestaoDeEventos.md).
 
 ## 5. Requisitos
 
-A análise de requisitos funcionais (RF-01 a RF-27) e não funcionais (RNF-01 a
+A análise de requisitos funcionais (RF-01 a RF-34) e não funcionais (RNF-01 a
 RNF-36), com restrições, premissas e itens fora de escopo, está em
 [`analiseDeRequisitos.md`](analiseDeRequisitos.md).
 
@@ -94,9 +102,9 @@ Arquivos editáveis no [draw.io](https://app.diagrams.net):
 
 | Arquivo | Conteúdo |
 |---|---|
-| [`casoUsoEArquitetura.drawio`](casoUsoEArquitetura.drawio) | Páginas "Casos de Uso" e "Arquitetura Hexagonal". |
-| [`diagramaSequencia.drawio`](diagramaSequencia.drawio) | Fluxo sequencial da compra de ingresso. |
-| [`entidadeRelacional.drawio`](entidadeRelacional.drawio) | Modelo entidade-relacionamento. |
+| [`casoUsoEArquitetura.drawio`](casoUsoEArquitetura.drawio) | Páginas "Casos de Uso" (UC1 a UC10, incluindo conta e área do cliente) e "Arquitetura Hexagonal". |
+| [`diagramaSequencia.drawio`](diagramaSequencia.drawio) | Fluxo sequencial da compra (`POST /api/compras`): token do cliente, bloqueio do lote, reserva de N ingressos e cobrança. |
+| [`entidadeRelacional.drawio`](entidadeRelacional.drawio) | Modelo entidade-relacionamento conforme as migrações V1 a V4, com as colunas novas da área do cliente destacadas. |
 
 ## 8. Modelo de dados (ER simplificado)
 
@@ -106,12 +114,20 @@ Entidades principais: `USUARIO`, `EVENTO`, `LOTE`, `INGRESSO`, `PEDIDO`,
 `INGRESSO`s. `LOCAL` e `ASSENTO` foram removidos (escopo de igreja única
 simplificado). Detalhe em [`entidadeRelacional.drawio`](entidadeRelacional.drawio).
 
+A migração `V4__conta_cliente_e_participante.sql` acrescentou: `usuario.senha_hash`
+(conta do cliente), `ingresso.nome_participante` (um nome por ingresso),
+`pedido.lote_id` e `pedido.quantidade_ingressos` (o pedido guarda o evento e a
+quantidade mesmo depois que a reserva expira e os ingressos voltam ao lote), além
+do índice `ix_pedido_usuario_data` para a lista "Meus pedidos".
+
 ## 9. Fluxo de compra (resumo)
 
-Cliente → `IngressoController` (adapter/in) → `ComprarIngressoUseCase` (core) →
-`IngressoRepositoryPort` (adapter/out) → `GatewayPagamentoPort`. Inclui bloqueio
-de concorrência (lock pessimista), reserva do ingresso, integração com o
-pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
+Cliente logado → `JwtFilter` (valida o token de cliente) → `CompraController`
+(adapter/in) → `ComprarIngressoService` (core) → portas de repositório e
+`GatewayPagamentoPort` (adapter/out). Inclui bloqueio de concorrência (lock
+pessimista no lote), reserva tudo ou nada de 1 a 5 ingressos (um nome cada),
+cobrança do valor total (link/QR) e retorno ao cliente com HTTP 201. Sem estoque
+suficiente, responde 409 informando quantos restam. Detalhe em
 [`diagramaSequencia.drawio`](diagramaSequencia.drawio).
 
 ## 10. Estado atual do código
@@ -224,23 +240,79 @@ pagamento (gerar link/QR) e retorno ao cliente. Detalhe em
   (`app.admin.*`); em dev, `admin@icb.local` / `admin123`.
 - `config/SecurityConfig`: API stateless; `/api/admin/**` (exceto o login) exige
   o token via `Authorization: Bearer` (papel `ROLE_ADMIN`); consulta, compra,
-  webhook, health e Swagger seguem **públicos**. 401/403 no mesmo formato de erro.
+  webhook, health e Swagger seguiam **públicos** (a compra passou a exigir login
+  do cliente na área do cliente — ver abaixo). 401/403 no mesmo formato de erro.
 - **CORS** restrito a `app.cors.allowed-origins` (env; dev `http://localhost:5173`).
 - Porta `ports.out/TokenAdminPort` (impl `adapter/out/security/JwtTokenAdmin`)
   isola a biblioteca de token.
 
-**Cobertura de testes:** 109 testes verdes — domínio, 9 serviços, slices
-`@WebMvcTest`, scheduler, `JwtTokenAdminTest`, e testes `@SpringBootTest`
-(`FluxoDeCompraViaRestTest` ponta a ponta por HTTP com login; `SegurancaAdminTest`
-para 401 sem token, login, token válido e preflight CORS).
+**Épico 9 concluído** (PostgreSQL — RNF-07 / RNF-11):
+
+- `adapter/out/persistence/jpa/`: entidades JPA separadas do domínio, repositórios
+  Spring Data e adapters `@ConditionalOnProperty(app.persistencia=postgres)`.
+  `buscarPorIdComBloqueio` faz `SELECT ... FOR UPDATE` (lock pessimista real).
+- Flyway com as migrações `V1` a `V4` em `src/main/resources/db/migration`.
+  Banco de produção no **Neon** (PostgreSQL gerenciado).
+- Testes de banco com **PostgreSQL embutido (Zonky)**, sem Docker:
+  `FluxoDeCompraPostgresTest` e `ReservaConcorrentePostgresTest` (concorrência
+  da reserva — RNF-30).
+
+**Virada de lote e gestão de eventos concluídas** (detalhes em
+[`viradaDeLote.md`](viradaDeLote.md) e [`gestaoDeEventos.md`](gestaoDeEventos.md)):
+
+- Lote com janela de vendas (`inicio_vendas` / `fim_vendas`); só o **lote ativo**
+  vende, e o próximo assume quando o anterior esgota ou a janela fecha (V2).
+- Evento com data de fim, imagem e cancelamento; o admin edita, cancela e exclui
+  eventos e lotes, e lista todos os eventos (V3).
+
+**Área do cliente concluída** (RN-1 / RN-4 / RF-28 a RF-34):
+
+- **Conta do cliente:** `POST /api/clientes/cadastro` e `POST /api/clientes/login`
+  devolvem um JWT de cliente (`papel=CLIENTE`, 7 dias; porta `TokenClientePort`,
+  impl `JwtTokenCliente`). Senha mínima de 8 caracteres com BCrypt. Telefone
+  validado e normalizado (`domain/Telefone`: DDD + celular ou fixo, só dígitos).
+  Quem já tinha comprado sem conta ativa a conta com o mesmo e-mail.
+- **Segurança:** `JwtFilter` aceita os dois tipos de token e define o papel;
+  `/api/compras` e `/api/clientes/me/**` exigem `ROLE_CLIENTE`, `/api/admin/**`
+  exige `ROLE_ADMIN`. O token de admin passou a carregar `papel=ADMIN` e um token
+  de cliente recebe 403 nas rotas do admin.
+- **Compra de vários ingressos:** `POST /api/compras` recebe `participantes`
+  (1 a `app.compra.max-ingressos-por-pedido`, padrão 5). A reserva é tudo ou nada
+  sob o lock do lote; sem estoque suficiente, 409 com quantos restam.
+- **Meus pedidos:** `GET /api/clientes/me`, `GET /api/clientes/me/pedidos` e
+  `GET /api/clientes/me/pedidos/{id}` (`ConsultarPedidosClienteService`), com o
+  evento do pedido, o prazo da reserva e cada ingresso com nome e QR. Pedido de
+  outro cliente → 404.
+- **Inscritos do admin:** um registro por ingresso, com o nome do participante e
+  os dados do comprador.
+- **Relógio no fuso da igreja:** `AplicacaoConfig` cria o `Clock` com
+  `app.fuso-horario` (America/Sao_Paulo); antes usava o fuso do servidor, o que
+  num servidor em UTC adiantaria em 3 h os prazos de reserva e as janelas de venda.
+
+**Cobertura de testes:** 209 testes verdes — domínio (incluindo `TelefoneTest`),
+serviços (`ComprarIngressoServiceTest`, `ContaClienteServiceTest`,
+`ConsultarPedidosClienteServiceTest` e os demais), slices `@WebMvcTest`,
+scheduler, `JwtTokenAdminTest`, `JwtTokenClienteTest` (inclusive a rejeição de
+token do papel errado), testes com PostgreSQL embutido e `@SpringBootTest`
+(`FluxoDeCompraViaRestTest` ponta a ponta por HTTP: 401 sem token, 403 com token
+de cliente no admin, telefone inválido → 422, compra de 2 ingressos, meus pedidos
+e um QR por ingresso; `SegurancaAdminTest` para login, token válido e preflight
+CORS).
 
 **Collection Postman:** `docs/postman/` — collection (todas as requests, incluindo
 **Admin · Login**, com scripts que encadeiam variáveis e token e um exemplo de
 response por request), environment `dev` e `README.md`. Validada com `newman`.
+Inclui **Cliente — Criar conta** (guarda o `clienteToken`) e **Cliente — Meus
+pedidos**; as compras usam o token do cliente.
 
 **Ainda pendente:**
 
-- PostgreSQL + Flyway + lock pessimista real (RNF-07/RNF-11) — Épico 9 (próximo).
+- Integração real com o Mercado Pago (hoje `GatewayPagamentoFake`) e envio real
+  de e-mail (hoje `NotificacaoPorLog`).
+- Recuperação de senha e confirmação de e-mail do cliente. Sem a confirmação,
+  quem souber o e-mail de um comprador antigo sem conta consegue ativar essa conta.
+- Retomar o link/QR de pagamento a partir do detalhe do pedido.
+- Check-in pelo QR na entrada (RF-27) e faturamento/relatórios para o admin.
 
 ## 11. Como compilar e executar
 
@@ -268,8 +340,11 @@ plano de desenvolvimento. Resumo:
 - **Épicos 4 e 7 (concluídos):** controllers REST + webhook (autenticado por segredo, idempotente), scheduler de expiração e contrato OpenAPI/Swagger → **MVP navegável em `dev`**.
 - **Épico 8 (concluído):** login do administrador (`POST /api/admin/login` → JWT próprio, senha BCrypt), proteção das rotas `/api/admin/**` e CORS restrito.
 - **Collection Postman** (`docs/postman/`) **concluída:** environment, todas as requests (login, compra, consulta, webhook, admin) com um exemplo de response salvo por request. Validada com `newman`.
-- **Épicos 9–11 (próximo: 9):** PostgreSQL + Flyway + lock pessimista, qualidade/CI (ArchUnit, Jacoco, Testcontainers), Mercado Pago real, deploy.
-- **Frontend:** repositório **separado**, trilha paralela que arranca quando houver um contrato estável para consumir (contrato do Épico 4 + collection Postman). Backend e frontend têm **igual peso** na entrega do TCC — trabalhar o backend primeiro neste repo é apenas sequenciamento.
+- **Épico 9 (concluído):** PostgreSQL (Neon) + Flyway + lock pessimista real, com testes em PostgreSQL embutido (Zonky).
+- **Virada de lote e gestão de eventos (concluídas):** lote ativo com janela de vendas; editar, cancelar e excluir eventos e lotes.
+- **Área do cliente (concluída):** conta e login do cliente, compra de 1 a 5 ingressos com nome por participante, meus pedidos e QR por ingresso.
+- **Próximos:** Mercado Pago real (sandbox), envio de e-mail, recuperação de senha, faturamento para o admin, check-in pelo QR, ArchUnit e deploy.
+- **Frontend:** repositório **separado** (`sistema-venda-ingressos-icb-web`, Vue 3 + TypeScript), já com vitrine, área do cliente e painel admin. Backend e frontend têm **igual peso** na entrega do TCC.
 
 ## 13. Referências bibliográficas
 

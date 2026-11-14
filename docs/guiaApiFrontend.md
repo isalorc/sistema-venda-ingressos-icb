@@ -75,7 +75,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 Para desenvolver o frontend, o perfil `dev` basta e é mais rápido. Ele zera os
-dados a cada restart — semeie um evento (ver [§9](#9-dados-de-teste)).
+dados a cada restart — semeie um evento (ver [§10](#10-dados-de-teste)).
 
 ---
 
@@ -679,6 +679,12 @@ sabendo disso.
   upload de imagem pelo backend (só guarda a URL — o front sobe pro Cloudinary
   ou similar). Sem "descancelar" evento. `quantidadeTotal` de lote só aumenta.
   Editar/excluir/cancelar evento e lote **já existe** (ver acima).
+- **`quantidadeTotal` do lote não é exposta em nenhum GET.** O detalhe público
+  (`GET /api/eventos/{id}`) só traz `quantidadeDisponivel`. Como o `PUT` de lote
+  exige `quantidadeTotal` (e só deixa aumentar), a tela de edição pede o **novo
+  total** ao admin e usa `quantidadeDisponivel` só como piso do campo; o `409`
+  "só pode aumentar" do backend é a validação real. Se algum dia houver um
+  detalhe admin do evento com `quantidadeTotal` por lote, pré-preencher o campo.
 
 ---
 

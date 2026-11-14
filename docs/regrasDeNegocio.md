@@ -33,32 +33,42 @@ base para os casos de uso (`usecase`) e para o modelo de domínio (`domain`).
 
 Detalhe completo em [`diagramaSequencia.drawio`](diagramaSequencia.drawio).
 
-1. Cliente **logado** escolhe um **lote** e informa um nome por ingresso (RN-1, RN-4).
-2. Sistema identifica o `Usuario` pelo token.
-3. Sob **bloqueio de concorrência** (lock pessimista), busca um `Ingresso`
-   `DISPONIVEL` do lote. Se não houver, retorna **esgotado** (HTTP 409).
-4. Marca o ingresso como `RESERVADO` (sem `codigo_qr` — RN-6) e decrementa
-   `quantidade_disponivel` do lote.
-5. Cria `Pedido` `PENDENTE` e `Pagamento` `PENDENTE`; `valor_total` = preço do
-   lote (RN-1: 1 ingresso).
-6. Chama o gateway de pagamento e obtém o link/QR de pagamento (RN-3).
-7. Retorna ao cliente os dados de pagamento.
+1. Cliente **logado** escolhe um **lote** e informa de 1 a 5 nomes de
+   participante, um por ingresso (RN-1, RN-4).
+2. Sistema identifica o `Usuario` pelo token (papel `CLIENTE`).
+3. Sob **bloqueio de concorrência** (lock pessimista no lote), confere se o evento
+   e o lote estão ativos e se há ingressos suficientes. Se não houver, retorna
+   HTTP 409 com quantos restam e não cria nada.
+4. Cria `Pedido` `PENDENTE` com o lote, a quantidade e `valor_total` = preço do
+   lote × quantidade (RN-1).
+5. Marca cada ingresso como `RESERVADO` com o nome do seu participante (sem
+   `codigo_qr` — RN-6) e decrementa `quantidade_disponivel` do lote. É tudo ou
+   nada: ou reserva todos, ou nenhum.
+6. Cria `Pagamento` `PENDENTE`, chama o gateway e obtém o link/QR de pagamento
+   (RN-3).
+7. Retorna ao cliente os dados de pagamento; o pedido aparece em "Meus pedidos".
 
 ### Confirmação de pagamento (webhook)
 
 - O gateway notifica o sistema em `POST /api/webhooks/pagamento`.
 - O processamento é **idempotente** (a notificação pode se repetir).
-- **Aprovado:** `Pagamento` → `APROVADO`; `Pedido` → `PAGO`; `Ingresso` →
-  `VENDIDO` com `codigo_qr` gerado (RN-6); e-mail enviado ao cliente (RN-4).
-- **Recusado / expirado:** libera a reserva do ingresso, repõe o estoque do lote
-  e cancela o pagamento.
+- **Aprovado:** `Pagamento` → `APROVADO`; `Pedido` → `PAGO`; cada `Ingresso` do
+  pedido → `VENDIDO` com o seu próprio `codigo_qr` (RN-6); e-mail enviado ao
+  cliente (RN-4).
+- **Recusado / expirado:** libera a reserva de todos os ingressos do pedido,
+  repõe o estoque do lote e cancela o pagamento.
 
 ### Expiração de reservas (job)
 
 - A cada intervalo configurável, o sistema busca `Pedido`s `PENDENTE` criados há
   mais de **15 minutos** (RN-2).
-- Para cada um: `Pedido` → `EXPIRADO`; ingresso `RESERVADO` → `DISPONIVEL`;
-  `quantidade_disponivel` do lote é reposta; `Pagamento` pendente é cancelado.
+- Para cada um: `Pedido` → `EXPIRADO`; os ingressos `RESERVADO` → `DISPONIVEL`
+  (o nome do participante é apagado); `quantidade_disponivel` do lote é reposta;
+  `Pagamento` pendente é cancelado.
+- Como a varredura roda a cada ~1 minuto, a área do cliente já mostra o pedido
+  como **reserva expirada** assim que o prazo passa, sem esperar o job.
+- Os horários usam o fuso da igreja (`app.fuso-horario`, America/Sao_Paulo), e
+  não o do servidor.
 
 ## Máquinas de estado
 
