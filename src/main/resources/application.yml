@@ -20,6 +20,8 @@ management:
 app:
   # Estratégia de persistência ativa: memoria | postgres
   persistencia: memoria
+  # Fuso das datas da API (horário local da igreja), independente do fuso do servidor.
+  fuso-horario: America/Sao_Paulo
   reserva:
     # TTL da reserva não paga (RN-2). Formato ISO-8601 Duration.
     ttl: PT15M
@@ -35,6 +37,12 @@ app:
     secret: ${JWT_SECRET:dev-secret-troque-em-producao-com-32-bytes-no-minimo}
     # Validade do token a partir da emissão. ISO-8601 Duration.
     expiracao: PT2H
+  # Área do cliente: validade do token de login do cliente (ISO-8601 Duration).
+  cliente:
+    token-expiracao: P7D
+  # Compra (RN-1): quantos ingressos (participantes) cabem em um pedido.
+  compra:
+    max-ingressos-por-pedido: 5
   admin:
     email: ${ADMIN_EMAIL:admin@icb.local}
     # Hash BCrypt da senha. Em dev corresponde a "admin123".

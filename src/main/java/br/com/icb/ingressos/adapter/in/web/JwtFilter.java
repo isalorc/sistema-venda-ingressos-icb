@@ -9,28 +9,32 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import br.com.icb.ingressos.ports.out.TokenAdminPort;
+import br.com.icb.ingressos.ports.out.TokenClientePort;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Lê o token do header {@code Authorization: Bearer <token>} e, se válido,
- * autentica a requisição como administrador (papel {@code ROLE_ADMIN}).
- *
- * <p>Sem token ou com token inválido a requisição segue não autenticada — quem
- * decide se isso é 401 é a regra de autorização do {@code SecurityConfig}.
+ * Lê o {@code Authorization: Bearer <token>} e autentica a requisição com o papel
+ * do token: {@code ROLE_ADMIN} (principal = e-mail do admin) ou
+ * {@code ROLE_CLIENTE} (principal = id do cliente, {@link Long}). Token ausente ou
+ * inválido segue sem autenticação; quem barra é o {@code SecurityConfig}.
  */
-public class JwtAdminFilter extends OncePerRequestFilter {
+public class JwtFilter extends OncePerRequestFilter {
 
     private static final String PREFIXO = "Bearer ";
     private static final List<SimpleGrantedAuthority> PAPEL_ADMIN =
             List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    private static final List<SimpleGrantedAuthority> PAPEL_CLIENTE =
+            List.of(new SimpleGrantedAuthority("ROLE_CLIENTE"));
 
     private final TokenAdminPort tokenAdmin;
+    private final TokenClientePort tokenCliente;
 
-    public JwtAdminFilter(TokenAdminPort tokenAdmin) {
+    public JwtFilter(TokenAdminPort tokenAdmin, TokenClientePort tokenCliente) {
         this.tokenAdmin = tokenAdmin;
+        this.tokenCliente = tokenCliente;
     }
 
     @Override
@@ -39,14 +43,16 @@ public class JwtAdminFilter extends OncePerRequestFilter {
                                     FilterChain cadeia) throws ServletException, IOException {
         var header = requisicao.getHeader("Authorization");
         if (header != null && header.startsWith(PREFIXO)) {
-            tokenAdmin.validar(header.substring(PREFIXO.length()).trim())
-                    .ifPresent(this::autenticar);
+            var token = header.substring(PREFIXO.length()).trim();
+            tokenAdmin.validar(token).ifPresentOrElse(
+                    email -> autenticar(email, PAPEL_ADMIN),
+                    () -> tokenCliente.validar(token).ifPresent(id -> autenticar(id, PAPEL_CLIENTE)));
         }
         cadeia.doFilter(requisicao, resposta);
     }
 
-    private void autenticar(String emailAdmin) {
-        var autenticacao = new UsernamePasswordAuthenticationToken(emailAdmin, null, PAPEL_ADMIN);
+    private static void autenticar(Object principal, List<SimpleGrantedAuthority> papeis) {
+        var autenticacao = new UsernamePasswordAuthenticationToken(principal, null, papeis);
         SecurityContextHolder.getContext().setAuthentication(autenticacao);
     }
 }

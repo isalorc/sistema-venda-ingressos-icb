@@ -3,9 +3,11 @@ package br.com.icb.ingressos.adapter.in.web;
 import br.com.icb.ingressos.domain.exception.DominioException;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
 import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
+import br.com.icb.ingressos.domain.exception.QuantidadeIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
 import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import br.com.icb.ingressos.usecase.CredenciaisInvalidasException;
+import br.com.icb.ingressos.usecase.EmailJaCadastradoException;
 import jakarta.validation.ConstraintViolationException;
 
 import org.slf4j.Logger;
@@ -118,6 +120,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /** Fallback para qualquer outra violação de regra de negócio → 422. */
+    @ExceptionHandler(QuantidadeIndisponivelException.class)
+    public ResponseEntity<ErroResponse> tratarQuantidadeIndisponivel(QuantidadeIndisponivelException excecao,
+                                                                     WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErroResponse.de(
+                HttpStatus.CONFLICT, excecao.getMessage(), caminho(requisicao)));
+    }
+
+    @ExceptionHandler(EmailJaCadastradoException.class)
+    public ResponseEntity<ErroResponse> tratarEmailJaCadastrado(EmailJaCadastradoException excecao,
+                                                                WebRequest requisicao) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ErroResponse.de(
+                HttpStatus.CONFLICT, excecao.getMessage(), caminho(requisicao)));
+    }
+
     @ExceptionHandler(DominioException.class)
     public ResponseEntity<ErroResponse> tratarViolacaoDeRegra(DominioException excecao,
                                                               WebRequest requisicao) {

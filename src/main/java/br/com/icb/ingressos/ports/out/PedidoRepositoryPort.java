@@ -25,5 +25,8 @@ public interface PedidoRepositoryPort {
      * informado. Base do job de expiração de reservas (RF-17): o caso de uso
      * passa {@code agora - ttlReserva}.
      */
+    /** Pedidos do cliente, do mais recente para o mais antigo. */
+    List<Pedido> listarPorUsuario(Long usuarioId);
+
     List<Pedido> listarPendentesCriadosAntesDe(LocalDateTime limite);
 }

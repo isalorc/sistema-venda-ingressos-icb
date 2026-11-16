@@ -32,6 +32,12 @@ class PedidoRepositoryJpa implements PedidoRepositoryPort {
     }
 
     @Override
+    public List<Pedido> listarPorUsuario(Long usuarioId) {
+        return repository.findByUsuarioIdOrderByDataPedidoDescIdDesc(usuarioId)
+                .stream().map(PedidoJpa::paraDominio).toList();
+    }
+
+    @Override
     public List<Pedido> listarPendentesCriadosAntesDe(LocalDateTime limite) {
         return repository.findByStatusAndDataPedidoBefore(StatusPedido.PENDENTE, limite)
                 .stream().map(PedidoJpa::paraDominio).toList();

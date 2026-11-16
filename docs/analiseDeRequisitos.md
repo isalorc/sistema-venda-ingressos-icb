@@ -14,8 +14,10 @@ Este documento levanta os **requisitos funcionais (RF)** e **não funcionais
 ## 1. Visão geral do produto
 
 Sistema web para **venda de ingressos de eventos de uma única igreja (ICB)**.
-Um **Cliente** consulta os eventos disponíveis, compra um ingresso e paga online
-(PIX ou cartão) por meio de um gateway externo. Um **Administrador** cadastra os
+Um **Cliente** consulta os eventos disponíveis, cria uma conta, compra até 5
+ingressos por pedido (um nome de participante por ingresso) e paga online (PIX
+ou cartão) por meio de um gateway externo. Numa área própria, acompanha seus
+pedidos e vê o QR code de cada ingresso. Um **Administrador** cadastra os
 eventos, gerencia os lotes de ingressos e acompanha os inscritos.
 
 **Motivação:** hoje a igreja usa a plataforma Sympla, que cobra **taxa de serviço
@@ -29,8 +31,10 @@ eventos. Detalhamento e referência em
 Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 - **Não** há mapa/numeração de assentos nem múltiplos locais.
-- **1 ingresso por compra** (RN-1).
-- Cliente **não cria conta** — informa os dados na compra (RN-4).
+- **1 a 5 ingressos por pedido**, todos do mesmo lote, com um nome de participante
+  por ingresso (RN-1).
+- Cliente **cria conta** (e-mail e senha) e precisa estar logado para comprar;
+  consultar eventos continua aberto (RN-4).
 - Gateway de pagamento e persistência começam como implementações simplificadas
   (adapter *fake* e repositório em memória).
 
@@ -38,7 +42,7 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 | Ator | Descrição |
 |---|---|
-| **Cliente** | Pessoa que compra ingresso. Não autenticado. |
+| **Cliente** | Pessoa que compra ingressos. Consulta eventos sem login; para comprar e ver seus pedidos, entra com a própria conta (JWT de cliente). |
 | **Administrador da Igreja** | Gerencia eventos, lotes e inscritos. Autenticado via JWT. |
 | **Gateway de Pagamento** (sistema externo) | Mercado Pago. Gera cobrança e notifica o resultado do pagamento via webhook. |
 | **Agendador (Scheduler)** (ator de sistema) | Dispara periodicamente a expiração de reservas não pagas. |
@@ -63,12 +67,12 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 | ID | Requisito | Prioridade | Origem |
 |---|---|---|---|
-| **RF-04** | O sistema deve permitir ao Cliente iniciar a compra de **1 ingresso** de um lote informando nome, e-mail e telefone. | M | UC2 / RN-1 / RN-4 |
-| **RF-05** | Ao iniciar a compra, o sistema deve criar ou reaproveitar um cadastro de usuário identificado pelo **e-mail**. | M | RN-4 |
-| **RF-06** | O sistema deve reservar um ingresso disponível do lote de forma segura contra concorrência (dois Fiéis não podem reservar o mesmo ingresso). | M | Seq. 3–7 / RN |
-| **RF-07** | Se o lote não tiver ingressos disponíveis, o sistema deve informar que está **esgotado** e não criar pedido. | M | Seq. "Ingressos Esgotados" |
-| **RF-08** | Ao reservar, o sistema deve decrementar a quantidade disponível do lote e registrar um **Pedido** com status `PENDENTE` e um **Pagamento** `PENDENTE`, com valor igual ao preço do lote. | M | Seq. 8–10 / RN-1 |
-| **RF-09** | O sistema deve solicitar ao gateway a geração de uma cobrança (PIX ou cartão) e retornar ao Cliente o link/QR de pagamento. | M | UC3 / Seq. 11–13 / RN-3 |
+| **RF-04** | O sistema deve permitir ao Cliente **autenticado** iniciar a compra de **1 a 5 ingressos** de um lote, informando o **nome do participante** de cada ingresso. | M | UC2 / RN-1 / RN-4 |
+| **RF-05** | O pedido deve ser vinculado à conta do Cliente identificada pelo **token de acesso**, sem pedir os dados pessoais de novo. | M | RN-4 |
+| **RF-06** | O sistema deve reservar os ingressos do lote de forma segura contra concorrência (dois clientes não podem reservar o mesmo ingresso) e **tudo ou nada**: ou reserva todos os ingressos do pedido, ou nenhum. | M | Seq. 7–14 / RN-1 |
+| **RF-07** | Se o lote não tiver ingressos suficientes para o pedido, o sistema deve informar **quantos restam** (ou que está esgotado) e não criar pedido. | M | Seq. "estoque insuficiente" |
+| **RF-08** | Ao reservar, o sistema deve decrementar a quantidade disponível do lote e registrar um **Pedido** com status `PENDENTE` e um **Pagamento** `PENDENTE`, com valor igual ao **preço do lote multiplicado pela quantidade** de ingressos. | M | Seq. 13–14 / RN-1 |
+| **RF-09** | O sistema deve solicitar ao gateway a geração de uma cobrança (PIX ou cartão) e retornar ao Cliente o link/QR de pagamento. | M | UC3 / Seq. 15–16 / RN-3 |
 | **RF-10** | O ingresso reservado **não** deve ter código QR até a confirmação do pagamento. | M | RN-6 |
 
 ### 2.3. Pagamento e confirmação
@@ -99,16 +103,28 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 | **RF-22** | O sistema deve permitir ao Administrador **criar lotes** para um evento (nome, preço, quantidade total). | M | UC5 |
 | **RF-23** | Ao criar um lote, o sistema deve gerar os ingressos correspondentes com status `DISPONIVEL`. | M | Seq. / RN |
 | **RF-24** | O sistema deve permitir ao Administrador **editar** um lote (preço, quantidade) respeitando ingressos já vendidos/reservados. | S | UC5 |
-| **RF-25** | O sistema deve permitir ao Administrador **visualizar os inscritos** de um evento (Fiéis com pedido pago e seus ingressos). | M | UC6 |
+| **RF-25** | O sistema deve permitir ao Administrador **visualizar os inscritos** de um evento: um registro por ingresso pago, com o **nome do participante** e os dados do **comprador**. | M | UC6 |
 | **RF-26** | Todas as operações administrativas devem exigir Administrador autenticado. | M | RN-5 |
 
-### 2.6. Validação de ingresso (check-in) — futuro
+### 2.6. Conta e área do Cliente
+
+| ID | Requisito | Prioridade | Origem |
+|---|---|---|---|
+| **RF-28** | O sistema deve permitir ao Cliente **criar uma conta** com nome, e-mail, telefone e senha (mínimo de 8 caracteres, guardada com hash BCrypt). O e-mail é único. | M | UC9 / RN-4 |
+| **RF-29** | O telefone deve ser validado (DDD + celular de 9 dígitos ou fixo de 8) e guardado só com os dígitos. | M | UC9 / RN-4 |
+| **RF-30** | O sistema deve permitir o **login** do Cliente (e-mail + senha) e devolver um token de acesso com validade de **7 dias**. | M | UC9 / RN-4 |
+| **RF-31** | Quem comprou antes de existir conta deve conseguir **ativar a conta** cadastrando-se com o mesmo e-mail, mantendo o histórico de pedidos. | S | RN-4 |
+| **RF-32** | O sistema deve listar os **pedidos do Cliente** (evento, lote, quantidade, valor, status e prazo da reserva quando pendente), do mais recente para o mais antigo. | M | UC10 |
+| **RF-33** | O sistema deve exibir o **detalhe de um pedido** com cada ingresso, o nome do participante, o status e, quando pago, o **QR code em imagem**. Um Cliente não pode ver pedidos de outro. | M | UC10 / RN-6 |
+| **RF-34** | Quando o prazo da reserva passar, a área do Cliente deve mostrar o pedido como **reserva expirada** imediatamente, sem esperar o job de expiração. | S | UC10 / RN-2 |
+
+### 2.7. Validação de ingresso (check-in) — futuro
 
 | ID | Requisito | Prioridade | Origem |
 |---|---|---|---|
 | **RF-27** | O sistema deve permitir validar um ingresso pelo código QR na entrada do evento, marcando-o como `UTILIZADO` e impedindo reuso. | W | `StatusIngresso.UTILIZADO` |
 
-### 2.7. Rastreabilidade caso de uso → requisitos
+### 2.8. Rastreabilidade caso de uso → requisitos
 
 | Caso de uso | Requisitos |
 |---|---|
@@ -120,6 +136,8 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 | UC6 Visualizar inscritos | RF-25 |
 | UC7 Login de admin | RF-19, RF-26 |
 | UC8 Receber confirmação de pagamento | RF-11 … RF-16 |
+| UC9 Criar conta / entrar (Cliente) | RF-28 … RF-31 |
+| UC10 Consultar meus pedidos e ingressos | RF-32, RF-33, RF-34 |
 
 ---
 
@@ -150,7 +168,7 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 | ID | Requisito | Prioridade |
 |---|---|---|
-| **RNF-12** | As rotas `/api/admin/**` devem exigir autenticação via **JWT**; senhas de administrador armazenadas com hash **BCrypt**. | M |
+| **RNF-12** | As rotas `/api/admin/**` devem exigir JWT de **administrador**, e as rotas de compra e da área do cliente (`/api/compras`, `/api/clientes/me/**`) JWT de **cliente**. O token carrega o papel (`ADMIN` ou `CLIENTE`) e um papel não acessa as rotas do outro. Senhas de administrador e de cliente com hash **BCrypt**. | M |
 | **RNF-13** | Segredos (chave JWT, credenciais do gateway, segredo do webhook, credenciais de banco) devem vir de **variáveis de ambiente**, nunca versionados. | M |
 | **RNF-14** | Todo o tráfego deve ocorrer sobre **HTTPS** em produção. | M |
 | **RNF-15** | As entradas da API devem ser validadas (Bean Validation) e os erros retornados em formato padronizado, sem vazar stack trace. | M |
@@ -161,8 +179,8 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 | ID | Requisito | Prioridade |
 |---|---|---|
-| **RNF-18** | O sistema coleta apenas os dados pessoais necessários do Cliente (nome, e-mail, telefone) — princípio da minimização. | M |
-| **RNF-19** | A finalidade do uso dos dados (emissão e envio do ingresso) deve ser informada ao Cliente no momento da compra. | S |
+| **RNF-18** | O sistema coleta apenas os dados pessoais necessários do Cliente (nome, e-mail, telefone e senha) e o nome de cada participante — princípio da minimização. O CPF **não** é coletado: só se justificaria com uma regra por pessoa (limite de ingressos, meia-entrada ou entrada com documento), que a igreja não tem hoje. | M |
+| **RNF-19** | A finalidade do uso dos dados (emissão dos ingressos e contato sobre os eventos) deve ser informada ao Cliente no cadastro da conta. | S |
 | **RNF-20** | Deve ser possível excluir/anonimizar os dados de um Cliente mediante solicitação. | C |
 
 ### 3.5. Desempenho e escalabilidade
@@ -198,7 +216,7 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 | ID | Requisito | Prioridade |
 |---|---|---|
 | **RNF-34** | Mensagens de erro e textos da API em **português (pt-BR)**. | M |
-| **RNF-35** | Datas e valores no fuso e formato brasileiros (America/Sao_Paulo, R$). | M |
+| **RNF-35** | Datas e valores no fuso e formato brasileiros (America/Sao_Paulo, R$). O relógio do backend usa o fuso configurado (`app.fuso-horario`), não o do servidor, para que um servidor em UTC não desloque prazos de reserva e janelas de venda. | M |
 | **RNF-36** | O contrato da API deve ser documentado (OpenAPI/Swagger) para consumo pelo time de frontend. | M |
 
 ---
@@ -222,8 +240,8 @@ Escopo do MVP (abordagem incremental — ver `regrasDeNegocio.md`):
 
 ## 6. Requisitos fora de escopo (agora)
 
-- Contas de Cliente com login e área "meus ingressos" (evolução de RN-4).
-- Compra de múltiplos ingressos num único pedido (evolução de RN-1).
+- Recuperação de senha e confirmação de e-mail do Cliente (dependem do envio real de e-mail).
+- Coleta de CPF (ver RNF-18).
 - Boleto como método de pagamento (evolução de RN-3).
 - Check-in/validação de ingresso na portaria (RF-27).
 - Reembolso/estorno, cupons de desconto, meia-entrada.

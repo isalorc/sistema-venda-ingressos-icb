@@ -75,6 +75,7 @@ public class ConsultarInscritosService implements ConsultarInscritosUseCase {
                 lote.getNome(),
                 pedido.getId(),
                 ingresso.getCodigoQr(),
-                pedido.getDataPedido()));
+                pedido.getDataPedido(),
+                ingresso.getNomeParticipante()));
     }
 }

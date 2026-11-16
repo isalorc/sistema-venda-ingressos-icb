@@ -5,10 +5,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,17 +34,18 @@ class CompraControllerTest {
     @MockBean private ComprarIngressoUseCase comprarIngresso;
 
     private static final String CORPO_VALIDO = """
-            { "loteId": 1, "nome": "Maria", "email": "maria@exemplo.com",
-              "telefone": "11999990000", "metodoPagamento": "PIX" }""";
+            { "loteId": 1, "participantes": ["Maria", "João"], "metodoPagamento": "PIX" }""";
 
     @Test
     void compraComSucessoRetorna201ComOsDadosDePagamento() throws Exception {
         when(comprarIngresso.comprar(any())).thenReturn(new ResultadoCompra(
-                10L, 5L, new BigDecimal("50.00"), StatusPedido.PENDENTE, null, "pix-payload"));
+                10L, List.of(5L, 6L), new BigDecimal("100.00"), StatusPedido.PENDENTE, null, "pix-payload"));
 
         mockMvc.perform(post("/api/compras").contentType(MediaType.APPLICATION_JSON).content(CORPO_VALIDO))
                 .andExpect(status().isCreated())
+                .andExpect(header().string("Location", "/api/clientes/me/pedidos/10"))
                 .andExpect(jsonPath("$.pedidoId").value(10))
+                .andExpect(jsonPath("$.ingressoIds.length()").value(2))
                 .andExpect(jsonPath("$.statusPedido").value("PENDENTE"))
                 .andExpect(jsonPath("$.qrCodePix").value("pix-payload"));
     }
@@ -50,8 +53,7 @@ class CompraControllerTest {
     @Test
     void corpoInvalidoRetorna422ComListaDeCamposESemChamarOCasoDeUso() throws Exception {
         var corpoInvalido = """
-                { "loteId": null, "nome": "", "email": "nao-eh-email",
-                  "telefone": "11999990000", "metodoPagamento": "PIX" }""";
+                { "loteId": null, "participantes": ["Maria", ""], "metodoPagamento": "PIX" }""";
 
         mockMvc.perform(post("/api/compras").contentType(MediaType.APPLICATION_JSON).content(corpoInvalido))
                 .andExpect(status().isUnprocessableEntity())

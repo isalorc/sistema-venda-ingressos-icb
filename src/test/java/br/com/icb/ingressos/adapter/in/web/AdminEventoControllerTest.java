@@ -179,11 +179,12 @@ class AdminEventoControllerTest {
     void listarInscritosRetornaAColecao() throws Exception {
         when(consultarInscritos.listarPorEvento(1L)).thenReturn(List.of(new Inscrito(
                 "Maria", "maria@exemplo.com", "11999990000", 10L, "Inteira", 30L, "qr-5",
-                LocalDateTime.of(2026, 8, 30, 12, 0))));
+                LocalDateTime.of(2026, 8, 30, 12, 0), "Joana")));
 
         mockMvc.perform(get("/api/admin/eventos/1/inscritos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].nomeCliente").value("Maria"))
-                .andExpect(jsonPath("$[0].codigoQr").value("qr-5"));
+                .andExpect(jsonPath("$[0].codigoQr").value("qr-5"))
+                .andExpect(jsonPath("$[0].nomeParticipante").value("Joana"));
     }
 }

@@ -35,6 +35,6 @@ class UsuarioRepositoryEmMemoria extends RepositorioEmMemoria<Usuario> implement
     @Override
     protected Usuario comId(Usuario usuario, long id) {
         return Usuario.reconstituir(id, usuario.getNome(), usuario.getEmail(),
-                usuario.getTelefone(), usuario.getDataCriacao());
+                usuario.getTelefone(), usuario.getSenhaHash(), usuario.getDataCriacao());
     }
 }

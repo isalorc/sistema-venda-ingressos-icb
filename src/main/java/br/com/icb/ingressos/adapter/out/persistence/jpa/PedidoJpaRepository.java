@@ -9,5 +9,7 @@ import br.com.icb.ingressos.domain.enums.StatusPedido;
 
 interface PedidoJpaRepository extends JpaRepository<PedidoJpa, Long> {
 
+    List<PedidoJpa> findByUsuarioIdOrderByDataPedidoDescIdDesc(Long usuarioId);
+
     List<PedidoJpa> findByStatusAndDataPedidoBefore(StatusPedido status, LocalDateTime limite);
 }

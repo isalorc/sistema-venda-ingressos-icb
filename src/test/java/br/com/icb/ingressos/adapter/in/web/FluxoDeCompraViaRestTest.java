@@ -64,11 +64,37 @@ class FluxoDeCompraViaRestTest {
         assertThat(detalhe.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(detalhe.getBody().get("nome")).isEqualTo("Congresso de Louvor 2026");
 
-        // Cliente compra um ingresso (rota pública)
-        var compra = cliente.postForEntity("/api/compras", json("""
-                { "loteId": %d, "nome": "Ana", "email": "ana@exemplo.com",
-                  "telefone": "11988887777", "metodoPagamento": "PIX" }""".formatted(loteId)), Map.class);
+        // Comprar exige login de cliente
+        var corpoCompra = """
+                { "loteId": %d, "participantes": ["Ana", "Bruno"], "metodoPagamento": "PIX" }"""
+                .formatted(loteId);
+        assertThat(cliente.postForEntity("/api/compras", json(corpoCompra), Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // Telefone sem DDD é recusado com erro no campo
+        var telefoneInvalido = cliente.postForEntity("/api/clientes/cadastro", json("""
+                { "nome": "Ana", "email": "ana-rest@exemplo.com", "telefone": "99999-8888",
+                  "senha": "senha-forte" }"""), Map.class);
+        assertThat(telefoneInvalido.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(telefoneInvalido.getBody().toString()).contains("telefone");
+
+        // Cliente cria a conta (já sai logado) e compra dois ingressos
+        var cadastro = cliente.postForEntity("/api/clientes/cadastro", json("""
+                { "nome": "Ana", "email": "ana-rest@exemplo.com", "telefone": "11988887777",
+                  "senha": "senha-forte" }"""), Map.class);
+        assertThat(cadastro.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        var tokenCliente = (String) cadastro.getBody().get("token");
+
+        // Token de cliente não abre o painel admin
+        assertThat(cliente.exchange("/api/admin/eventos", HttpMethod.GET,
+                new HttpEntity<>(comToken(tokenCliente)), Map.class).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+
+        var compra = cliente.exchange("/api/compras", HttpMethod.POST,
+                new HttpEntity<>(corpoCompra, comToken(tokenCliente)), Map.class);
         assertThat(compra.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat((java.util.List<?>) compra.getBody().get("ingressoIds")).hasSize(2);
+        assertThat(((Number) compra.getBody().get("valorTotal")).doubleValue()).isEqualTo(120.0);
         assertThat(compra.getBody().get("statusPedido")).isEqualTo("PENDENTE");
         assertThat((String) compra.getBody().get("qrCodePix")).isNotBlank();
         var pedidoId = ((Number) compra.getBody().get("pedidoId")).longValue();
@@ -76,7 +102,17 @@ class FluxoDeCompraViaRestTest {
         // Estoque decrementado
         var detalhePosCompra = cliente.getForEntity("/api/eventos/" + eventoId, Map.class);
         var lotes = (java.util.List<Map<String, Object>>) detalhePosCompra.getBody().get("lotes");
-        assertThat(((Number) lotes.get(0).get("quantidadeDisponivel")).intValue()).isEqualTo(4);
+        assertThat(((Number) lotes.get(0).get("quantidadeDisponivel")).intValue()).isEqualTo(3);
+
+        // "Meus pedidos" mostra o pedido pendente, com prazo da reserva
+        var meusPedidos = cliente.exchange("/api/clientes/me/pedidos", HttpMethod.GET,
+                new HttpEntity<>(comToken(tokenCliente)), Map[].class);
+        assertThat(meusPedidos.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(meusPedidos.getBody()).hasSize(1);
+        assertThat(meusPedidos.getBody()[0].get("status")).isEqualTo("PENDENTE");
+        assertThat(meusPedidos.getBody()[0].get("expiraEm")).isNotNull();
+        assertThat(((Map<?, ?>) meusPedidos.getBody()[0].get("evento")).get("nome"))
+                .isEqualTo("Congresso de Louvor 2026");
 
         // A rota de inscritos exige token de admin
         assertThat(cliente.getForEntity("/api/admin/eventos/" + eventoId + "/inscritos", Map.class)
@@ -96,13 +132,23 @@ class FluxoDeCompraViaRestTest {
         assertThat(enviarWebhook(referencia, "approved").getStatusCode()).isEqualTo(HttpStatus.OK);
 
         var inscritos = inscritos(eventoId);
-        assertThat(inscritos.getBody()).hasSize(1);
+        assertThat(inscritos.getBody()).hasSize(2);
+        assertThat(inscritos.getBody()).extracting(i -> i.get("nomeParticipante"))
+                .containsExactlyInAnyOrder("Ana", "Bruno");
         assertThat(inscritos.getBody()[0].get("nomeCliente")).isEqualTo("Ana");
         assertThat((String) inscritos.getBody()[0].get("codigoQr")).isNotBlank();
 
+        // O cliente vê o pedido pago com um QR por ingresso
+        var pedido = cliente.exchange("/api/clientes/me/pedidos/" + pedidoId, HttpMethod.GET,
+                new HttpEntity<>(comToken(tokenCliente)), Map.class);
+        assertThat(pedido.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(pedido.getBody().get("status")).isEqualTo("PAGO");
+        var ingressos = (java.util.List<Map<String, Object>>) pedido.getBody().get("ingressos");
+        assertThat(ingressos).hasSize(2).allSatisfy(i -> assertThat((String) i.get("codigoQr")).isNotBlank());
+
         // Reenvio do webhook é idempotente
         assertThat(enviarWebhook(referencia, "approved").getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(inscritos(eventoId).getBody()).hasSize(1);
+        assertThat(inscritos(eventoId).getBody()).hasSize(2);
     }
 
     private long cadastrarEvento() {
@@ -139,8 +185,12 @@ class FluxoDeCompraViaRestTest {
     }
 
     private HttpHeaders comToken() {
+        return comToken(tokenAdmin);
+    }
+
+    private HttpHeaders comToken(String token) {
         var headers = jsonHeaders();
-        headers.setBearerAuth(tokenAdmin);
+        headers.setBearerAuth(token);
         return headers;
     }
 
