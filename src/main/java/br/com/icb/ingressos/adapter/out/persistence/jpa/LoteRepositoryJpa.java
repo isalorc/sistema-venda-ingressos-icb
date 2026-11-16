@@ -39,4 +39,9 @@ class LoteRepositoryJpa implements LoteRepositoryPort {
     public List<Lote> listarPorEvento(Long eventoId) {
         return repository.findByEventoId(eventoId).stream().map(LoteJpa::paraDominio).toList();
     }
+
+    @Override
+    public void excluir(Long id) {
+        repository.deleteById(id);
+    }
 }

@@ -59,6 +59,20 @@ abstract class RepositorioEmMemoria<T> {
         return dados.values().stream().filter(criterio).toList();
     }
 
+    protected void remover(Long id) {
+        if (id != null) {
+            dados.remove(id);
+        }
+    }
+
+    protected void removerSe(Predicate<T> criterio) {
+        dados.values().removeIf(criterio);
+    }
+
+    protected long contar(Predicate<T> criterio) {
+        return dados.values().stream().filter(criterio).count();
+    }
+
     protected Optional<T> primeiro(Predicate<T> criterio) {
         return dados.values().stream().filter(criterio).findFirst();
     }

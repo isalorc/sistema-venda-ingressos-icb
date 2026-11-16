@@ -1,9 +1,11 @@
 package br.com.icb.ingressos.ports.out;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import br.com.icb.ingressos.domain.Ingresso;
+import br.com.icb.ingressos.domain.enums.StatusIngresso;
 
 /**
  * Porta de saída para a persistência de {@link Ingresso}.
@@ -45,4 +47,16 @@ public interface IngressoRepositoryPort {
      * (RF-25).
      */
     List<Ingresso> listarVendidosDoEvento(Long eventoId);
+
+    /**
+     * Quantos ingressos do evento estão em algum dos status informados. Base da
+     * checagem "é seguro excluir?" (gestão de eventos).
+     */
+    long contarPorEventoNosStatus(Long eventoId, Collection<StatusIngresso> status);
+
+    /** Idem, restrito a um lote. */
+    long contarPorLoteNosStatus(Long loteId, Collection<StatusIngresso> status);
+
+    /** Remove todos os ingressos de um lote (usado na exclusão em cascata). */
+    void excluirPorLote(Long loteId);
 }

@@ -4,9 +4,12 @@ Contrato REST do backend de venda de ingressos da Igreja ICB. Serve para o
 frontend (repositório separado) ser desenvolvido em paralelo, inclusive sabendo
 o que **ainda não existe**.
 
-Gerado a partir dos controllers em `adapter/in/web` após o Épico 9. Fonte da
-verdade em runtime: o **Swagger UI** local (`/swagger-ui.html`). Regras de
-negócio em [`regrasDeNegocio.md`](regrasDeNegocio.md).
+Gerado a partir dos controllers em `adapter/in/web`. Fonte da verdade em runtime:
+o **Swagger UI** local (`/swagger-ui.html`). Regras de negócio em
+[`regrasDeNegocio.md`](regrasDeNegocio.md); a "virada de lote" (lote ativo,
+janela de vendas) em [`viradaDeLote.md`](viradaDeLote.md); edição/cancelamento/
+exclusão de evento e lote, período (`dataFim`) e imagem em
+[`gestaoDeEventos.md`](gestaoDeEventos.md).
 
 | | |
 |---|---|
@@ -155,10 +158,16 @@ Enviados e recebidos como **string em maiúsculas**, exatamente assim:
 |---|---|---|
 | `MetodoPagamento` | `PIX` · `CARTAO` | envio na compra |
 | `StatusPedido` | `PENDENTE` · `PAGO` · `CANCELADO` · `EXPIRADO` | resposta da compra |
+| `StatusLote` | `A_VENDA` · `AGENDADO` · `ENCERRADO` · `ESGOTADO` · `NA_FILA` | detalhe do evento (por lote) |
+| `StatusVendas` | `A_VENDA` · `AGENDADA` · `ENCERRADA` | listagem de eventos e painel admin |
 | `StatusIngresso` | `DISPONIVEL` · `RESERVADO` · `VENDIDO` · `UTILIZADO` | interno (não exposto hoje) |
 | `StatusPagamento` | `PENDENTE` · `APROVADO` · `RECUSADO` · `CANCELADO` | interno (não exposto hoje) |
 
 `CARTAO` sem cedilha. Valor fora da lista → **400**.
+
+**Virada de lote:** só o lote `A_VENDA` é comprável. Quando ele esgota ou seu
+`fimVendas` passa, o próximo lote (por ordem de criação) assume. Detalhe em
+[`viradaDeLote.md`](viradaDeLote.md).
 
 ---
 
@@ -168,11 +177,19 @@ Rotas públicas. Nenhuma exige token.
 
 ### `GET /api/eventos`
 
-Lista os eventos **disponíveis para compra**: só os que ainda não aconteceram
-*e* têm pelo menos um lote com ingresso. `menorPreco` e `ingressosDisponiveis`
-consideram só os lotes com estoque. Array vazio se não houver nenhum.
+Lista os eventos **disponíveis para compra**: os que ainda não aconteceram *e*
+cujo `statusVendas` não é `ENCERRADA` (há lote à venda ou agendado). Array vazio
+se não houver nenhum.
+
+`menorPreco` e `ingressosDisponiveis` refletem o **lote à venda**; quando o
+evento está `AGENDADA`, refletem o **próximo lote a abrir** e vem `aberturaVendas`
+(fora de `AGENDADA`, `aberturaVendas` é `null`).
 
 **200:**
+
+`dataHora` é o **início** do evento; `dataFim` é opcional (`null` = evento
+pontual). `imagemUrl` é a URL do banner (`null` = sem imagem). Evento cancelado
+**não aparece** nesta lista.
 
 ```json
 [
@@ -181,17 +198,25 @@ consideram só os lotes com estoque. Array vazio se não houver nenhum.
     "nome": "Congresso de Louvor 2026",
     "descricao": "Encontro anual de músicos e adoradores",
     "dataHora": "2026-12-20T19:00:00",
+    "dataFim": "2026-12-22T22:00:00",
+    "imagemUrl": "https://res.cloudinary.com/icb/image/upload/congresso.jpg",
     "menorPreco": 60.00,
-    "ingressosDisponiveis": 118
+    "ingressosDisponiveis": 118,
+    "statusVendas": "A_VENDA",
+    "aberturaVendas": null
   }
 ]
 ```
 
 ### `GET /api/eventos/{eventoId}`
 
-Detalha um evento e **todos** os seus lotes — inclusive os esgotados
-(`quantidadeDisponivel: 0`) e eventos que já ocorreram. Cabe ao front decidir o
-que exibir.
+Detalha um evento e **todos** os seus lotes — inclusive esgotados, agendados,
+encerrados e eventos que já ocorreram. Cada lote traz o `status` derivado
+(virada de lote) e a janela `inicioVendas` / `fimVendas` (`null` quando não
+configurada). Só o lote `A_VENDA` deve ficar selecionável no front.
+
+`cancelado: true` → evento cancelado: mostra "vendas encerradas", esconde a
+compra (independente do `status` dos lotes).
 
 | Path param | Tipo | |
 |---|---|---|
@@ -205,9 +230,16 @@ que exibir.
   "nome": "Congresso de Louvor 2026",
   "descricao": "Encontro anual de músicos e adoradores",
   "dataHora": "2026-12-20T19:00:00",
+  "dataFim": "2026-12-22T22:00:00",
+  "imagemUrl": "https://res.cloudinary.com/icb/image/upload/congresso.jpg",
+  "cancelado": false,
   "lotes": [
-    { "id": 10, "nome": "1º Lote", "preco": 60.00, "quantidadeDisponivel": 118 },
-    { "id": 11, "nome": "2º Lote", "preco": 80.00, "quantidadeDisponivel": 0 }
+    { "id": 10, "nome": "1º Lote", "preco": 60.00, "quantidadeDisponivel": 0,
+      "status": "ESGOTADO", "inicioVendas": null, "fimVendas": null },
+    { "id": 11, "nome": "2º Lote", "preco": 80.00, "quantidadeDisponivel": 150,
+      "status": "A_VENDA", "inicioVendas": null, "fimVendas": null },
+    { "id": 12, "nome": "3º Lote", "preco": 100.00, "quantidadeDisponivel": 100,
+      "status": "AGENDADO", "inicioVendas": "2026-11-01T00:00:00", "fimVendas": null }
   ]
 }
 ```
@@ -254,11 +286,26 @@ de pagamento. A reserva expira em **15 minutos** se não for paga.
 ```
 
 - `qrCodePix` vem preenchido só para `PIX`; para `CARTAO` é `null`.
-- `urlPagamento` sempre vem, mas hoje é **sintética** (gateway fake) — ver [§8](#8-lacunas-conhecidas).
+- `urlPagamento` sempre vem, mas hoje é **sintética** (gateway fake) — ver [§9](#9-lacunas-conhecidas).
 - O cliente é resolvido pelo e-mail: se já comprou antes com o mesmo e-mail,
   reaproveita o cadastro.
+- **O `loteId` tem de ser o lote à venda (`A_VENDA`).** Comprar de lote agendado,
+  encerrado ou na fila → `409`.
 
-**Erros:** `404` lote inexistente · `409` lote esgotado · `422` campo inválido.
+**Erros:**
+
+| Status | Situação | `mensagem` |
+|---|---|---|
+| `404` | lote inexistente | — |
+| `409` | evento cancelado | "As vendas deste evento foram encerradas." |
+| `409` | lote esgotado | "O lote N não possui ingressos disponíveis." |
+| `409` | vendas do lote encerradas (`fimVendas` passou) | "As vendas deste lote foram encerradas." |
+| `409` | lote ainda não abriu (`AGENDADO`) | "As vendas deste lote ainda não começaram." |
+| `409` | lote na fila (há um lote anterior à venda) | "Este lote ainda não está disponível." |
+| `422` | campo inválido | — |
+
+O front já trata `409` recarregando `GET /api/eventos/{id}` — a `mensagem` nova
+aparece de brinde.
 
 ---
 
@@ -283,6 +330,56 @@ de pagamento. A reserva expira em **15 minutos** se não for paga.
 
 **Erros:** `401` `mensagem: "E-mail ou senha inválidos."` · `422` corpo inválido.
 
+### `GET /api/admin/eventos` *(requer token)*
+
+Lista **todos** os eventos do painel — inclusive os **sem lote**, os **já
+ocorridos** e os **cancelados** —, do mais recente para o mais antigo (por id).
+Array vazio se não houver eventos.
+
+**200:**
+
+```json
+[
+  {
+    "id": 2,
+    "nome": "Vigília de Ano Novo",
+    "descricao": null,
+    "dataHora": "2026-12-31T22:00:00",
+    "dataFim": null,
+    "imagemUrl": null,
+    "cancelado": false,
+    "jaOcorreu": false,
+    "quantidadeLotes": 0,
+    "ingressosTotais": 0,
+    "ingressosDisponiveis": 0,
+    "statusVendas": "ENCERRADA"
+  },
+  {
+    "id": 1,
+    "nome": "Congresso de Louvor 2026",
+    "descricao": "Encontro anual",
+    "dataHora": "2026-12-20T19:00:00",
+    "dataFim": "2026-12-22T22:00:00",
+    "imagemUrl": "https://res.cloudinary.com/icb/image/upload/congresso.jpg",
+    "cancelado": false,
+    "jaOcorreu": false,
+    "quantidadeLotes": 2,
+    "ingressosTotais": 150,
+    "ingressosDisponiveis": 130,
+    "statusVendas": "A_VENDA"
+  }
+]
+```
+
+- `ingressosTotais` / `ingressosDisponiveis` = soma de todos os lotes; a diferença
+  é o que já foi reservado ou vendido.
+- `statusVendas`: `A_VENDA` (vendendo) · `AGENDADA` (esperando um lote abrir) ·
+  `ENCERRADA` (nada a vender — inclusive sem lote).
+- `cancelado: true` → evento cancelado (segue aqui no painel; some da vitrine).
+- Status por lote e janela de vendas: `GET /api/eventos/{id}` (público).
+
+**Erros:** `401` sem token.
+
 ### `POST /api/admin/eventos` *(requer token)*
 
 Cadastra um evento (ainda sem lotes).
@@ -291,11 +388,43 @@ Cadastra um evento (ainda sem lotes).
 |---|---|---|
 | `nome` | string | obrigatório · não vazio |
 | `descricao` | string | opcional |
-| `dataHora` | `LocalDateTime` | obrigatório · **no futuro** · `"2026-12-20T19:00:00"` |
+| `dataHora` | `LocalDateTime` | obrigatório · **no futuro** · início do evento |
+| `dataFim` | `LocalDateTime` | opcional · ≥ `dataHora` (`null` = evento pontual) |
+| `imagemUrl` | string | opcional · URL `http(s)` do banner |
 
 **201** — `Location: /api/eventos/{id}` — corpo `{ "id": 1 }`.
 
-**Erros:** `401` sem token · `422` nome vazio / data no passado.
+**Erros:** `401` sem token · `422` nome vazio / `dataHora` no passado / `dataFim` antes de `dataHora` / `imagemUrl` sem `http`.
+
+### `PUT /api/admin/eventos/{eventoId}` *(requer token)*
+
+Substitui os dados editáveis do evento (não é PATCH parcial — envie todos).
+
+| Campo | Regras |
+|---|---|
+| `nome` | obrigatório · não vazio |
+| `descricao` | opcional (`null` limpa) |
+| `dataHora` | obrigatório · início |
+| `dataFim` | opcional · ≥ `dataHora` |
+| `imagemUrl` | opcional · URL `http(s)` |
+
+Mudar as datas revalida as janelas de venda dos lotes contra o novo fim do evento.
+
+**200** com o evento no shape do detalhe (`GET /api/eventos/{id}`).
+**404** inexistente · **409** evento cancelado · **422** `dataFim`/janela de lote inconsistente.
+
+### `POST /api/admin/eventos/{eventoId}/cancelamento` *(requer token)*
+
+Cancela o evento: some da vitrine pública, não aceita compra nova; pedidos,
+pagamentos e ingressos ficam intactos. Sem corpo. Idempotente. **200**. **404** inexistente.
+
+### `DELETE /api/admin/eventos/{eventoId}` *(requer token)*
+
+Exclusão **real** (apaga evento, lotes e ingressos). Permitida **só se nenhum
+ingresso está `RESERVADO` ou `VENDIDO`**.
+
+**204** no sucesso · **404** inexistente · **409** `"Não é possível excluir um
+evento com ingressos vendidos ou reservados. Cancele o evento."`
 
 ### `POST /api/admin/eventos/{eventoId}/lotes` *(requer token)*
 
@@ -311,16 +440,51 @@ Chame uma vez por lote.
 | `nome` | string | obrigatório · não vazio |
 | `preco` | decimal | obrigatório · ≥ 0 · máx. 2 casas |
 | `quantidadeTotal` | integer | obrigatório · > 0 |
+| `inicioVendas` | `LocalDateTime` | opcional · antes disso o lote fica `AGENDADO` |
+| `fimVendas` | `LocalDateTime` | opcional · no futuro · ≥ `inicioVendas` · ≤ `dataHora` do evento |
+
+Sem `inicioVendas` / `fimVendas`, o lote entra na fila só pela ordem de criação
+e pelo estoque (virada por esgotamento). Não valida sobreposição de janelas
+entre lotes.
 
 ```json
-{ "nome": "1º Lote", "preco": 60.00, "quantidadeTotal": 120 }
+{
+  "nome": "2º Lote",
+  "preco": 80.00,
+  "quantidadeTotal": 150,
+  "inicioVendas": "2026-10-01T00:00:00",
+  "fimVendas": "2026-10-31T23:59:59"
+}
 ```
 
 **201** — `Location: /api/eventos/{eventoId}` — corpo `{ "id": 10 }`.
 O `id` no corpo é o do **lote**; o `Location` aponta para o evento pai.
 
 **Erros:** `401` sem token · `404` evento inexistente · `422` preço negativo /
-quantidade ≤ 0.
+quantidade ≤ 0 / `fimVendas` no passado / `fimVendas` antes de `inicioVendas` /
+datas de venda depois do fim do evento.
+
+### `PUT /api/admin/eventos/{eventoId}/lotes/{loteId}` *(requer token)*
+
+Substitui os dados editáveis do lote.
+
+| Campo | Regras |
+|---|---|
+| `nome` | obrigatório · não vazio |
+| `preco` | obrigatório · ≥ 0 · afeta só compras futuras (o pedido guarda o valor no momento da compra) |
+| `quantidadeTotal` | obrigatório · **só pode aumentar** — o acréscimo vira estoque `DISPONIVEL` |
+| `inicioVendas` | opcional · como na criação |
+| `fimVendas` | opcional · no futuro · ≥ `inicioVendas` · ≤ fim do evento |
+
+**200** com o evento no shape do detalhe.
+**404** evento/lote inexistente · **409** evento cancelado **ou** tentou reduzir `quantidadeTotal` · **422** janela inconsistente.
+
+### `DELETE /api/admin/eventos/{eventoId}/lotes/{loteId}` *(requer token)*
+
+Apaga o lote e seus ingressos. Permitida **só se nenhum ingresso do lote está
+`RESERVADO` ou `VENDIDO`**.
+
+**204** no sucesso · **404** inexistente · **409** `"Não é possível excluir um lote com ingressos vendidos ou reservados."`
 
 ### `GET /api/admin/eventos/{eventoId}/inscritos` *(requer token)*
 
@@ -363,14 +527,16 @@ acontece depois, quando o gateway notifica.
 ## 8. Fluxo de compra
 
 1. **Listagem** — `GET /api/eventos` → cards com `menorPreco` e
-   `ingressosDisponiveis`.
-2. **Detalhe** — `GET /api/eventos/{id}` → escolhe o lote. Desabilite no UI os
-   lotes com `quantidadeDisponivel: 0`.
+   `ingressosDisponiveis`. Use `statusVendas`: card normal para `A_VENDA`;
+   "vendas a partir de DD/MM" (`aberturaVendas`) para `AGENDADA`.
+2. **Detalhe** — `GET /api/eventos/{id}` → só o lote `status: "A_VENDA"` fica
+   selecionável. `AGENDADO` → "abre em DD/MM"; `ENCERRADO`/`ESGOTADO` → etiqueta.
+   Sem nenhum lote `A_VENDA`, esconda o botão "Continuar".
 3. **Dados do cliente + método** — formulário: nome, e-mail, telefone,
    `PIX`/`CARTAO`.
-4. **Criar a compra** — `POST /api/compras` → `201` com `pedidoId`,
-   `valorTotal`, `urlPagamento`, `qrCodePix`. Trate `409` (esgotou entre o passo
-   2 e agora) recarregando o detalhe.
+4. **Criar a compra** — `POST /api/compras` com o `loteId` do lote `A_VENDA` →
+   `201` com `pedidoId`, `valorTotal`, `urlPagamento`, `qrCodePix`. Trate `409`
+   (esgotou/virou entre o passo 2 e agora) recarregando o detalhe.
 5. **Tela de pagamento** — mostra o QR PIX (`qrCodePix`) ou manda para
    `urlPagamento`. A reserva vale 15 min.
 6. **Confirmação — *aqui falta endpoint*.** Não há como o cliente consultar se o
@@ -403,8 +569,10 @@ sabendo disso.
   servidor — o cliente não recebe nada. Não prometa o e-mail como canal único
   no texto da UI ainda.
 - **Admin enxuto.** Um único administrador (sem tela de cadastro de admin). Sem
-  editar nem excluir evento; sem editar lote; sem endpoint de check-in
-  ("utilizar ingresso"). Sem paginação nas listas.
+  endpoint de check-in ("utilizar ingresso"). Sem paginação nas listas. Sem
+  upload de imagem pelo backend (só guarda a URL — o front sobe pro Cloudinary
+  ou similar). Sem "descancelar" evento. `quantidadeTotal` de lote só aumenta.
+  Editar/excluir/cancelar evento e lote **já existe** (ver acima).
 
 ---
 

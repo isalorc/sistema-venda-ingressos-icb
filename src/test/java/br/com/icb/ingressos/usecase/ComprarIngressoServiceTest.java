@@ -12,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import br.com.icb.ingressos.domain.Evento;
 import br.com.icb.ingressos.domain.Ingresso;
 import br.com.icb.ingressos.domain.Lote;
 import br.com.icb.ingressos.domain.Pagamento;
@@ -31,8 +33,11 @@ import br.com.icb.ingressos.domain.enums.StatusIngresso;
 import br.com.icb.ingressos.domain.enums.StatusPagamento;
 import br.com.icb.ingressos.domain.enums.StatusPedido;
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
+import br.com.icb.ingressos.domain.exception.LoteIndisponivelException;
 import br.com.icb.ingressos.domain.exception.RecursoNaoEncontradoException;
+import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
 import br.com.icb.ingressos.ports.in.ComprarIngressoUseCase.ComprarIngressoCommand;
+import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort;
 import br.com.icb.ingressos.ports.out.GatewayPagamentoPort.CobrancaCriada;
 import br.com.icb.ingressos.ports.out.IngressoRepositoryPort;
@@ -50,6 +55,7 @@ class ComprarIngressoServiceTest {
     private static final LocalDateTime AGORA = LocalDateTime.of(2026, 8, 30, 12, 0);
 
     @Mock private UsuarioRepositoryPort usuarioRepository;
+    @Mock private EventoRepositoryPort eventoRepository;
     @Mock private LoteRepositoryPort loteRepository;
     @Mock private IngressoRepositoryPort ingressoRepository;
     @Mock private PedidoRepositoryPort pedidoRepository;
@@ -61,8 +67,13 @@ class ComprarIngressoServiceTest {
     @BeforeEach
     void setUp() {
         var clock = Clock.fixed(Instant.parse("2026-08-30T12:00:00Z"), ZoneOffset.UTC);
-        service = new ComprarIngressoService(usuarioRepository, loteRepository, ingressoRepository,
-                pedidoRepository, pagamentoRepository, gatewayPagamento, clock);
+        service = new ComprarIngressoService(usuarioRepository, eventoRepository, loteRepository,
+                ingressoRepository, pedidoRepository, pagamentoRepository, gatewayPagamento, clock);
+    }
+
+    private void stubEventoAtivo() {
+        when(eventoRepository.buscarPorId(EVENTO_ID)).thenReturn(Optional.of(
+                Evento.reconstituir(EVENTO_ID, "Congresso", null, AGORA.plusDays(30))));
     }
 
     private static ComprarIngressoCommand comando() {
@@ -78,6 +89,7 @@ class ComprarIngressoServiceTest {
     }
 
     private void stubFluxoFeliz() {
+        stubEventoAtivo();
         when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(loteComEstoque(100)));
         when(ingressoRepository.buscarPrimeiroDisponivelDoLote(LOTE_ID)).thenReturn(Optional.of(ingressoDisponivel()));
         when(pedidoRepository.salvar(any())).thenReturn(
@@ -162,6 +174,7 @@ class ComprarIngressoServiceTest {
 
     @Test
     void loteSemIngressoDisponivelLancaIngressoEsgotadoSemCriarPedido() {
+        stubEventoAtivo();
         when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(loteComEstoque(100)));
         when(ingressoRepository.buscarPrimeiroDisponivelDoLote(LOTE_ID)).thenReturn(Optional.empty());
 
@@ -170,5 +183,58 @@ class ComprarIngressoServiceTest {
 
         verify(pedidoRepository, never()).salvar(any());
         verify(gatewayPagamento, never()).criarCobranca(any());
+    }
+
+    @Test
+    void eventoCanceladoRecusaACompra() {
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(loteComEstoque(100)));
+        when(eventoRepository.buscarPorId(EVENTO_ID)).thenReturn(Optional.of(Evento.reconstituir(
+                EVENTO_ID, "Cancelado", null, AGORA.plusDays(30), null, null, AGORA.minusDays(1))));
+
+        assertThatExceptionOfType(TransicaoInvalidaException.class)
+                .isThrownBy(() -> service.comprar(comando()));
+
+        verify(pedidoRepository, never()).salvar(any());
+    }
+
+    @Test
+    void loteAgendadoRecusaACompraSemCriarPedido() {
+        stubEventoAtivo();
+        var agendado = Lote.reconstituir(LOTE_ID, EVENTO_ID, "2º Lote", PRECO, 100, 100,
+                AGORA.plusDays(10), null);
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(agendado));
+        when(loteRepository.listarPorEvento(EVENTO_ID)).thenReturn(List.of(agendado));
+
+        assertThatExceptionOfType(LoteIndisponivelException.class)
+                .isThrownBy(() -> service.comprar(comando()))
+                .withMessageContaining("ainda não começaram");
+
+        verify(pedidoRepository, never()).salvar(any());
+    }
+
+    @Test
+    void loteEncerradoRecusaACompra() {
+        stubEventoAtivo();
+        var encerrado = Lote.reconstituir(LOTE_ID, EVENTO_ID, "1º Lote", PRECO, 100, 40,
+                null, AGORA.minusDays(1));
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(encerrado));
+        when(loteRepository.listarPorEvento(EVENTO_ID)).thenReturn(List.of(encerrado));
+
+        assertThatExceptionOfType(LoteIndisponivelException.class)
+                .isThrownBy(() -> service.comprar(comando()))
+                .withMessageContaining("encerradas");
+    }
+
+    @Test
+    void loteNaFilaRecusaACompraEnquantoOAnteriorEstaAtivo() {
+        stubEventoAtivo();
+        var loteAnterior = Lote.reconstituir(1L, EVENTO_ID, "1º Lote", PRECO, 100, 10);
+        var loteNaFila = loteComEstoque(100);
+        when(loteRepository.buscarPorIdComBloqueio(LOTE_ID)).thenReturn(Optional.of(loteNaFila));
+        when(loteRepository.listarPorEvento(EVENTO_ID)).thenReturn(List.of(loteAnterior, loteNaFila));
+
+        assertThatExceptionOfType(LoteIndisponivelException.class)
+                .isThrownBy(() -> service.comprar(comando()))
+                .withMessageContaining("ainda não está disponível");
     }
 }

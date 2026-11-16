@@ -15,9 +15,16 @@ public interface CadastrarEventoUseCase {
      */
     Long cadastrar(CadastrarEventoCommand comando);
 
+    /**
+     * @param dataHora  início do evento
+     * @param dataFim   fim do evento (opcional; nulo = evento pontual)
+     * @param imagemUrl URL da imagem/banner (opcional)
+     */
     record CadastrarEventoCommand(
             String nome,
             String descricao,
-            LocalDateTime dataHora) {
+            LocalDateTime dataHora,
+            LocalDateTime dataFim,
+            String imagemUrl) {
     }
 }

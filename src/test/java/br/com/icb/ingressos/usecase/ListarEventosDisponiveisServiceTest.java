@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import br.com.icb.ingressos.domain.Evento;
 import br.com.icb.ingressos.domain.Lote;
+import br.com.icb.ingressos.domain.enums.StatusVendas;
 import br.com.icb.ingressos.ports.out.EventoRepositoryPort;
 import br.com.icb.ingressos.ports.out.LoteRepositoryPort;
 
@@ -37,20 +38,62 @@ class ListarEventosDisponiveisServiceTest {
         service = new ListarEventosDisponiveisService(eventoRepository, loteRepository, clock);
     }
 
+    private void eventoUnico() {
+        when(eventoRepository.listarTodos()).thenReturn(List.of(
+                Evento.reconstituir(1L, "Congresso", "descrição", AGORA.plusDays(30))));
+    }
+
     @Test
-    void resumeOMenorPrecoEOTotalDisponivelDosLotesComEstoque() {
-        var evento = Evento.reconstituir(1L, "Congresso", "descrição", AGORA.plusDays(10));
-        when(eventoRepository.listarTodos()).thenReturn(List.of(evento));
+    void precoEDisponibilidadeVemDoLoteAtivoNaoDaSomaDosLotes() {
+        eventoUnico();
         when(loteRepository.listarPorEvento(1L)).thenReturn(List.of(
-                Lote.reconstituir(10L, 1L, "Lote 1", new BigDecimal("80.00"), 50, 5),
-                Lote.reconstituir(11L, 1L, "Lote 2", new BigDecimal("50.00"), 50, 3),
-                Lote.reconstituir(12L, 1L, "Esgotado", new BigDecimal("30.00"), 50, 0)));
+                Lote.reconstituir(10L, 1L, "1º Lote", new BigDecimal("80.00"), 50, 5),
+                Lote.reconstituir(11L, 1L, "2º Lote", new BigDecimal("50.00"), 50, 3)));
 
         var disponiveis = service.listar();
 
         assertThat(disponiveis).hasSize(1);
-        assertThat(disponiveis.get(0).menorPreco()).isEqualByComparingTo("50.00");
-        assertThat(disponiveis.get(0).ingressosDisponiveis()).isEqualTo(8);
+        assertThat(disponiveis.get(0).statusVendas()).isEqualTo(StatusVendas.A_VENDA);
+        assertThat(disponiveis.get(0).menorPreco()).isEqualByComparingTo("80.00");
+        assertThat(disponiveis.get(0).ingressosDisponiveis()).isEqualTo(5);
+        assertThat(disponiveis.get(0).aberturaVendas()).isNull();
+    }
+
+    @Test
+    void quandoPrimeiroLoteEsgotaOSegundoAssumeComoAtivo() {
+        eventoUnico();
+        when(loteRepository.listarPorEvento(1L)).thenReturn(List.of(
+                Lote.reconstituir(10L, 1L, "1º Lote", new BigDecimal("80.00"), 50, 0),
+                Lote.reconstituir(11L, 1L, "2º Lote", new BigDecimal("50.00"), 50, 20)));
+
+        var evento = service.listar().get(0);
+
+        assertThat(evento.menorPreco()).isEqualByComparingTo("50.00");
+        assertThat(evento.ingressosDisponiveis()).isEqualTo(20);
+    }
+
+    @Test
+    void eventoComTodosOsLotesEsgotadosNaoAparece() {
+        eventoUnico();
+        when(loteRepository.listarPorEvento(1L)).thenReturn(List.of(
+                Lote.reconstituir(10L, 1L, "Único", new BigDecimal("30.00"), 50, 0)));
+
+        assertThat(service.listar()).isEmpty();
+    }
+
+    @Test
+    void eventoSoComLoteAgendadoApareceComoAgendadaEDadosDoProximo() {
+        eventoUnico();
+        var abertura = AGORA.plusDays(10);
+        when(loteRepository.listarPorEvento(1L)).thenReturn(List.of(
+                Lote.reconstituir(10L, 1L, "1º Lote", new BigDecimal("60.00"), 100, 100, abertura, null)));
+
+        var evento = service.listar().get(0);
+
+        assertThat(evento.statusVendas()).isEqualTo(StatusVendas.AGENDADA);
+        assertThat(evento.aberturaVendas()).isEqualTo(abertura);
+        assertThat(evento.menorPreco()).isEqualByComparingTo("60.00");
+        assertThat(evento.ingressosDisponiveis()).isEqualTo(100);
     }
 
     @Test
@@ -62,11 +105,9 @@ class ListarEventosDisponiveisServiceTest {
     }
 
     @Test
-    void omiteEventoSemLoteComEstoque() {
-        var evento = Evento.reconstituir(1L, "Sem estoque", null, AGORA.plusDays(10));
-        when(eventoRepository.listarTodos()).thenReturn(List.of(evento));
-        when(loteRepository.listarPorEvento(1L)).thenReturn(List.of(
-                Lote.reconstituir(10L, 1L, "Esgotado", new BigDecimal("30.00"), 50, 0)));
+    void omiteEventoSemLote() {
+        eventoUnico();
+        when(loteRepository.listarPorEvento(1L)).thenReturn(List.of());
 
         assertThat(service.listar()).isEmpty();
     }

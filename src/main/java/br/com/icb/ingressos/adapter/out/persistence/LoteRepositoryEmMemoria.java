@@ -39,6 +39,11 @@ class LoteRepositoryEmMemoria extends RepositorioEmMemoria<Lote> implements Lote
     }
 
     @Override
+    public void excluir(Long id) {
+        remover(id);
+    }
+
+    @Override
     protected Long id(Lote lote) {
         return lote.getId();
     }
@@ -46,6 +51,7 @@ class LoteRepositoryEmMemoria extends RepositorioEmMemoria<Lote> implements Lote
     @Override
     protected Lote comId(Lote lote, long id) {
         return Lote.reconstituir(id, lote.getEventoId(), lote.getNome(), lote.getPreco(),
-                lote.getQuantidadeTotal(), lote.getQuantidadeDisponivel());
+                lote.getQuantidadeTotal(), lote.getQuantidadeDisponivel(),
+                lote.getInicioVendas(), lote.getFimVendas());
     }
 }

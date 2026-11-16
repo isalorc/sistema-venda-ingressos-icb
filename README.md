@@ -37,6 +37,8 @@ Regra de dependência: `adapter` conhece `usecase` e `domain`; `domain` e
 | [`docs/documentacaoProjeto.md`](docs/documentacaoProjeto.md) | Resumo consolidado, motivação e referências bibliográficas. |
 | [`docs/analiseDeRequisitos.md`](docs/analiseDeRequisitos.md) | Requisitos funcionais (RF) e não funcionais (RNF). |
 | [`docs/regrasDeNegocio.md`](docs/regrasDeNegocio.md) | Regras de negócio (RN-1 a RN-6) e máquinas de estado. |
+| [`docs/viradaDeLote.md`](docs/viradaDeLote.md) | Virada de lote: lote ativo derivado, janela de vendas, status por lote. |
+| [`docs/gestaoDeEventos.md`](docs/gestaoDeEventos.md) | Edição, cancelamento e exclusão de evento e lote; período (`dataFim`) e imagem. |
 | [`docs/guiaApiFrontend.md`](docs/guiaApiFrontend.md) | Contrato REST para o time de frontend: endpoints, autenticação, formatos, fluxo de compra e lacunas conhecidas. |
 | [`docs/casoUsoEArquitetura.drawio`](docs/casoUsoEArquitetura.drawio) | Diagramas de casos de uso e da arquitetura hexagonal. |
 | [`docs/diagramaSequencia.drawio`](docs/diagramaSequencia.drawio) | Fluxo sequencial da compra de ingresso. |

@@ -29,7 +29,8 @@ class CadastrarEventoServiceTest {
         when(eventoRepository.salvar(any())).thenReturn(
                 Evento.reconstituir(42L, "Congresso", "descrição", dataHora));
 
-        var id = service.cadastrar(new CadastrarEventoCommand("Congresso", "descrição", dataHora));
+        var id = service.cadastrar(new CadastrarEventoCommand(
+                "Congresso", "descrição", dataHora, null, null));
 
         assertThat(id).isEqualTo(42L);
 

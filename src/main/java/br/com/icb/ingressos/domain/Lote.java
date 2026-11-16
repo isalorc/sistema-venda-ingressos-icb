@@ -1,6 +1,7 @@
 package br.com.icb.ingressos.domain;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import br.com.icb.ingressos.domain.exception.IngressoEsgotadoException;
 import br.com.icb.ingressos.domain.exception.TransicaoInvalidaException;
@@ -18,9 +19,14 @@ public class Lote {
     private final BigDecimal preco;
     private final int quantidadeTotal;
     private int quantidadeDisponivel;
+    /** Abertura das vendas do lote (RN — virada de lote). Nulo = já aberto. */
+    private final LocalDateTime inicioVendas;
+    /** Fim das vendas do lote. Nulo = sem prazo. */
+    private final LocalDateTime fimVendas;
 
     private Lote(Long id, Long eventoId, String nome, BigDecimal preco,
-                int quantidadeTotal, int quantidadeDisponivel) {
+                int quantidadeTotal, int quantidadeDisponivel,
+                LocalDateTime inicioVendas, LocalDateTime fimVendas) {
         this.id = id;
         this.eventoId = Validacao.exigir(eventoId, "eventoId");
         this.nome = Validacao.exigirTexto(nome, "nome");
@@ -30,17 +36,51 @@ public class Lote {
             throw new IllegalArgumentException(
                     "quantidadeDisponivel deve estar entre 0 e quantidadeTotal.");
         }
+        if (inicioVendas != null && fimVendas != null && fimVendas.isBefore(inicioVendas)) {
+            throw new IllegalArgumentException(
+                    "fimVendas não pode ser anterior a inicioVendas.");
+        }
         this.quantidadeDisponivel = quantidadeDisponivel;
+        this.inicioVendas = inicioVendas;
+        this.fimVendas = fimVendas;
     }
 
     public static Lote novo(Long eventoId, String nome, BigDecimal preco, int quantidadeTotal) {
-        return new Lote(null, eventoId, nome, preco, quantidadeTotal, quantidadeTotal);
+        return novo(eventoId, nome, preco, quantidadeTotal, null, null);
+    }
+
+    public static Lote novo(Long eventoId, String nome, BigDecimal preco, int quantidadeTotal,
+                            LocalDateTime inicioVendas, LocalDateTime fimVendas) {
+        return new Lote(null, eventoId, nome, preco, quantidadeTotal, quantidadeTotal,
+                inicioVendas, fimVendas);
     }
 
     public static Lote reconstituir(Long id, Long eventoId, String nome, BigDecimal preco,
                                     int quantidadeTotal, int quantidadeDisponivel) {
+        return reconstituir(id, eventoId, nome, preco, quantidadeTotal, quantidadeDisponivel, null, null);
+    }
+
+    public static Lote reconstituir(Long id, Long eventoId, String nome, BigDecimal preco,
+                                    int quantidadeTotal, int quantidadeDisponivel,
+                                    LocalDateTime inicioVendas, LocalDateTime fimVendas) {
         return new Lote(Validacao.exigir(id, "id"), eventoId, nome, preco,
-                quantidadeTotal, quantidadeDisponivel);
+                quantidadeTotal, quantidadeDisponivel, inicioVendas, fimVendas);
+    }
+
+    /**
+     * Devolve uma nova instância com os dados editados, preservando id. A
+     * {@code quantidadeTotal} só pode aumentar — o acréscimo entra como estoque
+     * disponível; reduzir conflita com os ingressos já gerados.
+     */
+    public Lote editado(String nome, BigDecimal preco, int novaQuantidadeTotal,
+                        LocalDateTime inicioVendas, LocalDateTime fimVendas) {
+        if (novaQuantidadeTotal < quantidadeTotal) {
+            throw new TransicaoInvalidaException(
+                    "Não é possível reduzir a capacidade do lote " + id + ".");
+        }
+        var acrescimo = novaQuantidadeTotal - quantidadeTotal;
+        return new Lote(id, eventoId, nome, preco, novaQuantidadeTotal,
+                quantidadeDisponivel + acrescimo, inicioVendas, fimVendas);
     }
 
     public void reservarUnidade() {
@@ -64,5 +104,27 @@ public class Lote {
 
     public int quantidadeReservada() {
         return quantidadeTotal - quantidadeDisponivel;
+    }
+
+    /** As vendas já abriram na referência informada (ou não têm data de abertura). */
+    public boolean vendasIniciadas(LocalDateTime referencia) {
+        Validacao.exigir(referencia, "referencia");
+        return inicioVendas == null || !inicioVendas.isAfter(referencia);
+    }
+
+    /** As vendas ainda não encerraram na referência informada (ou não têm prazo). */
+    public boolean vendasNaoEncerradas(LocalDateTime referencia) {
+        Validacao.exigir(referencia, "referencia");
+        return fimVendas == null || !referencia.isAfter(fimVendas);
+    }
+
+    /** Dentro da janela de vendas configurada. */
+    public boolean dentroDaJanelaDeVendas(LocalDateTime referencia) {
+        return vendasIniciadas(referencia) && vendasNaoEncerradas(referencia);
+    }
+
+    /** Elegível a ser o lote ativo do evento: tem estoque e está na janela. */
+    public boolean disponivelParaVenda(LocalDateTime referencia) {
+        return !estaEsgotado() && dentroDaJanelaDeVendas(referencia);
     }
 }

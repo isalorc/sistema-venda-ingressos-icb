@@ -25,4 +25,7 @@ public interface EventoRepositoryPort {
      * no caso de uso.
      */
     List<Evento> listarTodos();
+
+    /** Remove o evento. Os lotes e ingressos são removidos antes, no caso de uso. */
+    void excluir(Long id);
 }

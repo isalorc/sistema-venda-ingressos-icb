@@ -1,5 +1,6 @@
 package br.com.icb.ingressos.adapter.out.persistence.jpa;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,5 +53,20 @@ class IngressoRepositoryJpa implements IngressoRepositoryPort {
     public List<Ingresso> listarVendidosDoEvento(Long eventoId) {
         return repository.findByEventoIdAndStatus(eventoId, StatusIngresso.VENDIDO)
                 .stream().map(IngressoJpa::paraDominio).toList();
+    }
+
+    @Override
+    public long contarPorEventoNosStatus(Long eventoId, Collection<StatusIngresso> status) {
+        return status.isEmpty() ? 0 : repository.countByEventoIdAndStatusIn(eventoId, status);
+    }
+
+    @Override
+    public long contarPorLoteNosStatus(Long loteId, Collection<StatusIngresso> status) {
+        return status.isEmpty() ? 0 : repository.countByLoteIdAndStatusIn(loteId, status);
+    }
+
+    @Override
+    public void excluirPorLote(Long loteId) {
+        repository.deleteByLoteId(loteId);
     }
 }

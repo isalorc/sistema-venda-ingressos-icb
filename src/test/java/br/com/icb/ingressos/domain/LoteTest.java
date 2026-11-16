@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,77 @@ class LoteTest {
         void rejeitaDisponivelMaiorQueTotalNaReconstituicao() {
             assertThatIllegalArgumentException()
                     .isThrownBy(() -> Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 11));
+        }
+
+        @Test
+        void rejeitaFimDeVendasAntesDoInicio() {
+            var inicio = LocalDateTime.of(2026, 10, 10, 0, 0);
+            assertThatIllegalArgumentException().isThrownBy(() -> Lote.novo(
+                    1L, "Inteira", new BigDecimal("50.00"), 10, inicio, inicio.minusDays(1)));
+        }
+    }
+
+    @Nested
+    class JanelaDeVendas {
+
+        private static final LocalDateTime AGORA = LocalDateTime.of(2026, 8, 30, 12, 0);
+
+        @Test
+        void loteSemJanelaEstaSempreDentroDaJanela() {
+            var lote = loteCom(10);
+
+            assertThat(lote.dentroDaJanelaDeVendas(AGORA)).isTrue();
+            assertThat(lote.disponivelParaVenda(AGORA)).isTrue();
+        }
+
+        @Test
+        void loteComInicioNoFuturoAindaNaoIniciou() {
+            var lote = Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 10,
+                    AGORA.plusDays(5), null);
+
+            assertThat(lote.vendasIniciadas(AGORA)).isFalse();
+            assertThat(lote.disponivelParaVenda(AGORA)).isFalse();
+        }
+
+        @Test
+        void loteComFimNoPassadoJaEncerrou() {
+            var lote = Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 10,
+                    null, AGORA.minusDays(1));
+
+            assertThat(lote.vendasNaoEncerradas(AGORA)).isFalse();
+            assertThat(lote.disponivelParaVenda(AGORA)).isFalse();
+        }
+
+        @Test
+        void loteEsgotadoNaoEstaDisponivelMesmoDentroDaJanela() {
+            var lote = Lote.reconstituir(1L, 1L, "Inteira", new BigDecimal("50.00"), 10, 0);
+
+            assertThat(lote.dentroDaJanelaDeVendas(AGORA)).isTrue();
+            assertThat(lote.disponivelParaVenda(AGORA)).isFalse();
+        }
+    }
+
+    @Nested
+    class Edicao {
+
+        @Test
+        void editadoAumentandoCapacidadeSomaAoEstoqueDisponivel() {
+            var lote = Lote.reconstituir(5L, 1L, "Inteira", new BigDecimal("50.00"), 100, 40);
+
+            var novo = lote.editado("Inteira", new BigDecimal("60.00"), 150, null, null);
+
+            assertThat(novo.getId()).isEqualTo(5L);
+            assertThat(novo.getQuantidadeTotal()).isEqualTo(150);
+            assertThat(novo.getQuantidadeDisponivel()).isEqualTo(90); // 40 + 50
+            assertThat(novo.getPreco()).isEqualByComparingTo("60.00");
+        }
+
+        @Test
+        void editadoRecusaReduzirACapacidade() {
+            var lote = Lote.reconstituir(5L, 1L, "Inteira", new BigDecimal("50.00"), 100, 40);
+
+            assertThatExceptionOfType(TransicaoInvalidaException.class).isThrownBy(
+                    () -> lote.editado("Inteira", new BigDecimal("50.00"), 80, null, null));
         }
     }
 

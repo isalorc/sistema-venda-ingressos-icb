@@ -34,7 +34,13 @@ class EventoRepositoryEmMemoria extends RepositorioEmMemoria<Evento> implements 
     }
 
     @Override
+    public void excluir(Long id) {
+        remover(id);
+    }
+
+    @Override
     protected Evento comId(Evento evento, long id) {
-        return Evento.reconstituir(id, evento.getNome(), evento.getDescricao(), evento.getDataHora());
+        return Evento.reconstituir(id, evento.getNome(), evento.getDescricao(), evento.getDataHora(),
+                evento.getDataFim(), evento.getImagemUrl(), evento.getCanceladoEm());
     }
 }
